@@ -1,0 +1,6 @@
+.All{
+    color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Center content horizontally */
+}
