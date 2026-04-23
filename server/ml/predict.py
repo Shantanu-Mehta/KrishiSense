@@ -24,18 +24,37 @@ try:
     # Get input data from command line arguments
     input_data = json.loads(sys.argv[1])
     
-    # Prepare features for prediction using exact CSV header names
-    features = {
-        'crop_type': input_data.get('crop_type', 'rice'),
-        'soil_type': input_data.get('soil_type', 'loamy'),
-        'soil_moisture_%': float(input_data.get('soil_moisture_%', 50)),
-        'soil_pH': float(input_data.get('soil_pH', 7.0)),
-        'temperature_C': float(input_data.get('temperature_C', 25)),
-        'rainfall_mm': float(input_data.get('rainfall_mm', 100)),
-        'humidity_%': float(input_data.get('humidity_%', 65)),
-        'NDVI_index': float(input_data.get('NDVI_index', 0.5)),
-        'region': input_data.get('region', 'North India')
-    }
+    # Check if this is ESP32 sensor data or crop data
+    if 'device_id' in input_data:
+        # ESP32 sensor data format
+        features = {
+            'crop_type': input_data.get('crop_type', 'wheat'),
+            'soil_type': 'loamy',  # default
+            'soil_moisture_%': float(input_data.get('soil_moisture', 50)),
+            'soil_pH': float(input_data.get('ph', 7.0)),
+            'temperature_C': float(input_data.get('temperature', 25)),
+            'rainfall_mm': float(input_data.get('rainfall', 0)),
+            'humidity_%': float(input_data.get('humidity', 65)),
+            'NDVI_index': 0.5,  # default
+            'region': 'North India'  # default
+        }
+        
+        # Log additional fields if present
+        if 'water_level' in input_data:
+            print(f"Warning: water_level {input_data['water_level']} not used in prediction", file=sys.stderr)
+    else:
+        # Original crop data format
+        features = {
+            'crop_type': input_data.get('crop_type', 'rice'),
+            'soil_type': input_data.get('soil_type', 'loamy'),
+            'soil_moisture_%': float(input_data.get('soil_moisture_%', 50)),
+            'soil_pH': float(input_data.get('soil_pH', 7.0)),
+            'temperature_C': float(input_data.get('temperature_C', 25)),
+            'rainfall_mm': float(input_data.get('rainfall_mm', 100)),
+            'humidity_%': float(input_data.get('humidity_%', 65)),
+            'NDVI_index': float(input_data.get('NDVI_index', 0.5)),
+            'region': input_data.get('region', 'North India')
+        }
     
     # Encode categorical features
     encoded_features = []
@@ -91,34 +110,49 @@ try:
     
     # Make predictions
     classification_result = clf_model.predict(X_scaled)[0]
-    classification_proba = clf_model.predict_proba(X_scaled)[0]
     regression_result = reg_model.predict(X_scaled)[0]
     
-    # Get confidence score
-    confidence = float(max(classification_proba)) if hasattr(clf_model, 'predict_proba') else 0.85
-    
-    # Prepare output with exact CSV field names
-    output = {
-        'success': True,
-        'predictions': {
-            'irrigationNeeded': int(classification_result),
-            'irrigationAmount': float(regression_result),
-            'recommended_irrigation_mm': float(regression_result) if regression_result > 0 else 100,
-            'confidence': float(confidence),
-            'classification': {
-                'result': int(classification_result),
-                'label': 'Irrigation Required' if classification_result > 0.5 else 'No Irrigation'
-            },
-            'regression': {
-                'recommended_irrigation_mm': float(regression_result)
+    # For ESP32, return simple format
+    if 'device_id' in input_data:
+        output = {
+            "should_irrigate": bool(classification_result > 0.5),
+            "water_amount": float(regression_result)
+        }
+    else:
+        # Original format
+        classification_proba = clf_model.predict_proba(X_scaled)[0]
+        confidence = float(max(classification_proba)) if hasattr(clf_model, 'predict_proba') else 0.85
+        
+        output = {
+            'success': True,
+            'predictions': {
+                'irrigationNeeded': int(classification_result),
+                'irrigationAmount': float(regression_result),
+                'recommended_irrigation_mm': float(regression_result) if regression_result > 0 else 100,
+                'confidence': float(confidence),
+                'classification': {
+                    'result': int(classification_result),
+                    'label': 'Irrigation Required' if classification_result > 0.5 else 'No Irrigation'
+                },
+                'regression': {
+                    'recommended_irrigation_mm': float(regression_result)
+                }
             }
         }
-    }
+    
+    print(json.dumps(output))
 
 except Exception as e:
-    error_output = {
-        "success": False,
-        "error": str(e)
-    }
-    print(json.dumps(error_output))
+    if 'device_id' in input_data:
+        output = {
+            "should_irrigate": False,
+            "water_amount": 0,
+            "error": str(e)
+        }
+    else:
+        output = {
+            "success": False,
+            "error": str(e)
+        }
+    print(json.dumps(output))
     sys.exit(1)

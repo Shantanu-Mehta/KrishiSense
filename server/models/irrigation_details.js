@@ -1,13 +1,12 @@
 const mongoose = require('mongoose');
 
 const IrrigationSchema = new mongoose.Schema({
-  fieldId: { type: String, required: true },
-  startTime: { type: Date, required: true },
-  endTime: { type: Date },
-  volumeLiters: { type: Number },
-  method: { type: String },
-  notes: { type: String },
-  createdAt: { type: Date, default: Date.now }
+  device_id: { type: String, required: true },
+  field_id: { type: String, default: "FIELD_01" },
+  should_irrigate: { type: Boolean, default: false },
+  water_amount: { type: Number, default: 0 },
+  pump_command: { type: String, enum: ["PUMP_ON", "PUMP_OFF"], default: "PUMP_OFF" },
+  timestamp: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model('irrigation_details', IrrigationSchema);

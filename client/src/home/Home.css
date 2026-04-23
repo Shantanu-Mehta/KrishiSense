@@ -1,7 +1,7 @@
 .home-container {
   min-height: 100vh;
-  background-color: #111827;
-  color: #f3f4f6;
+  background-color: #f8fdf9;
+  color: #1b1b1b;
   padding: 20px;
 }
 
@@ -12,12 +12,12 @@
 .page-title {
   font-size: 32px;
   font-weight: 700;
-  color: #f3f4f6;
+  color: #1b1b1b;
   margin: 0 0 8px 0;
 }
 
 .page-subtitle {
-  color: #9ca3af;
+  color: #6b7280;
   font-size: 16px;
   margin: 0;
 }
@@ -30,16 +30,17 @@
 }
 
 .metric-card {
-  background-color: #1f2937;
-  border: 1px solid #374151;
-  border-radius: 8px;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
   padding: 24px;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .metric-card:hover {
-  border-color: #10b981;
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.1);
+  border-color: #2d6a4f;
+  box-shadow: 0 4px 20px rgba(45, 106, 79, 0.15);
 }
 
 .cards {
@@ -50,24 +51,25 @@
 }
 
 .card-item {
-  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-  border: 1px solid #374151;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
   border-radius: 12px;
   padding: 24px;
   transition: all 0.3s ease;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .card-item:hover {
-  border-color: #10b981;
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
+  border-color: #2d6a4f;
+  box-shadow: 0 4px 6px rgba(45, 106, 79, 0.15);
   transform: translateY(-4px);
 }
 
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .empty-state-icon {

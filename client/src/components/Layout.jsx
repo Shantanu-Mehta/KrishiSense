@@ -9,7 +9,7 @@ function Layout({ children }) {
       style={{
         display: "flex",
         minHeight: "100vh",
-        backgroundColor: "#111827",
+        backgroundColor: "#f8fdf9",
       }}
     >
       <Sidebar />
@@ -20,7 +20,7 @@ function Layout({ children }) {
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          backgroundColor: "#111827",
+          backgroundColor: "#f8fdf9",
         }}
       >
         <Navbar />

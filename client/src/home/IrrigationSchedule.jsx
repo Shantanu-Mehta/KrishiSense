@@ -1,338 +1,273 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import "./IrrigationSchedule.css";
 
 function IrrigationSchedule() {
-  const [schedules, setSchedules] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedSchedule, setSelectedSchedule] = useState(null);
-  const [activeTab, setActiveTab] = useState("list");
-
-  // Fetch schedules from backend
-  const fetchSchedules = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/data/schedules");
-      setSchedules(res.data);
-    } catch (error) {
-      console.error("Error fetching schedules:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const navigate = useNavigate();
+  const [plan, setPlan] = useState(null);
+  const [activeTab, setActiveTab] = useState('schedule');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchSchedules();
+    // Load plan from localStorage
+    const savedPlan = localStorage.getItem('irrigationPlan');
+    if (savedPlan) {
+      try {
+        const parsedPlan = JSON.parse(savedPlan);
+        setPlan(parsedPlan);
+      } catch (error) {
+        console.error('Error parsing saved plan:', error);
+      }
+    }
+    setIsLoading(false);
   }, []);
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (timeString) => {
+    // Convert 24-hour format to 12-hour format
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const getIrrigationStatus = (dayData) => {
+    const today = new Date().toISOString().split('T')[0];
+    const dayDate = dayData.date;
+
+    if (dayDate < today) return { status: 'completed', color: '#10b981', text: 'Completed' };
+    if (dayDate === today) return { status: 'today', color: '#f59e0b', text: 'Today' };
+    return { status: 'upcoming', color: '#6b7280', text: 'Upcoming' };
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="irrigation-schedule-container">
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+            <p>Loading irrigation plan...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!plan) {
+    return (
+      <Layout>
+        <div className="irrigation-schedule-container">
+          <div className="schedule-header">
+            <h1>💧 Irrigation Schedule</h1>
+            <p>AI-powered irrigation plans for optimal crop growth</p>
+          </div>
+          <div className="no-plans">
+            <div className="no-plans-icon">🌱</div>
+            <h3>No Irrigation Plan Found</h3>
+            <p>Create an irrigation plan by adding a crop first.</p>
+            <button
+              onClick={() => navigate('/add-field')}
+              className="create-plan-button"
+            >
+              Create Plan
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "20px" }}>
+      <div className="irrigation-schedule-container">
         {/* Page Header */}
-        <div style={{ marginBottom: "32px" }}>
-          <h1 style={{ fontSize: "28px", fontWeight: "700", color: "#f3f4f6", margin: "0 0 8px 0" }}>
-            📅 Irrigation Schedules
-          </h1>
-          <p style={{ color: "#9ca3af", fontSize: "14px", margin: 0 }}>
-            AI-predicted irrigation schedules for your crops based on soil, weather, and sensor data
-          </p>
+        <div className="schedule-header">
+          <h1>💧 Irrigation Schedule</h1>
+          <p>AI-powered irrigation plans for optimal crop growth</p>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: "12px", marginBottom: "24px", borderBottom: "1px solid #374151", paddingBottom: "12px" }}>
+        {/* Plan Summary Section */}
+        <div className="plan-summary">
+          <div className="summary-card">
+            <h3>📊 Plan Summary</h3>
+            <div className="summary-grid">
+              <div className="summary-item">
+                <span className="summary-label">Plan ID:</span>
+                <span className="summary-value">{plan.plan_id}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Crop:</span>
+                <span className="summary-value">{plan.crop.charAt(0).toUpperCase() + plan.crop.slice(1)}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Season:</span>
+                <span className="summary-value">{plan.season}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Location:</span>
+                <span className="summary-value">{plan.location}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Should Irrigate:</span>
+                <span className="summary-value">
+                  {plan.should_irrigate ? '✅ Yes' : '❌ No'}
+                </span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Water per Session:</span>
+                <span className="summary-value">{plan.water_amount_per_session}L</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="validation-card">
+            <h3>✅ Current Status</h3>
+            <div className="status-indicators">
+              <div className="status-item">
+                <span className="status-icon">💧</span>
+                <span className="status-text">
+                  Irrigation: {plan.should_irrigate ? 'Required' : 'Not Required'}
+                </span>
+              </div>
+              <div className="status-item">
+                <span className="status-icon">📅</span>
+                <span className="status-text">
+                  Plan Duration: 7 Days
+                </span>
+              </div>
+              <div className="status-item">
+                <span className="status-icon">🌱</span>
+                <span className="status-text">
+                  Crop: {plan.crop.charAt(0).toUpperCase() + plan.crop.slice(1)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="tab-navigation">
           <button
-            onClick={() => setActiveTab("list")}
-            style={{
-              padding: "8px 16px",
-              border: "none",
-              background: activeTab === "list" ? "#10b981" : "transparent",
-              color: activeTab === "list" ? "#fff" : "#9ca3af",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontWeight: "500",
-              fontSize: "14px",
-              transition: "all 0.3s ease",
-            }}
+            className={`tab-button ${activeTab === 'schedule' ? 'active' : ''}`}
+            onClick={() => setActiveTab('schedule')}
           >
-            📋 Schedule List
+            📅 Schedule
           </button>
           <button
-            onClick={() => setActiveTab("calendar")}
-            style={{
-              padding: "8px 16px",
-              border: "none",
-              background: activeTab === "calendar" ? "#10b981" : "transparent",
-              color: activeTab === "calendar" ? "#fff" : "#9ca3af",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontWeight: "500",
-              fontSize: "14px",
-              transition: "all 0.3s ease",
-            }}
+            className={`tab-button ${activeTab === 'recommendations' ? 'active' : ''}`}
+            onClick={() => setActiveTab('recommendations')}
           >
-            🗓️ Calendar View
+            💡 Recommendations
           </button>
         </div>
 
-        {/* Content */}
-        {loading ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#9ca3af" }}>
-            Loading schedules...
-          </div>
-        ) : schedules.length === 0 ? (
-          <div
-            style={{
-              background: "#1f2937",
-              border: "1px solid #374151",
-              padding: "60px 20px",
-              borderRadius: "12px",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: "48px", marginBottom: "16px" }}>📭</div>
-            <p style={{ color: "#d1d5db", fontSize: "16px", margin: "0 0 8px 0" }}>
-              No irrigation schedules yet
-            </p>
-            <p style={{ color: "#9ca3af", fontSize: "14px" }}>
-              Add crops to generate AI-predicted irrigation schedules
-            </p>
-          </div>
-        ) : activeTab === "list" ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "20px" }}>
-            {schedules.map((schedule, idx) => (
-              <div
-                key={idx}
-                onClick={() => setSelectedSchedule(schedule)}
-                style={{
-                  background: "#1f2937",
-                  border: "1px solid #374151",
-                  borderRadius: "12px",
-                  padding: "20px",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  transform: selectedSchedule?._id === schedule._id ? "scale(1.02)" : "scale(1)",
-                  borderColor: selectedSchedule?._id === schedule._id ? "#10b981" : "#374151",
-                  boxShadow: selectedSchedule?._id === schedule._id ? "0 0 20px rgba(16, 185, 129, 0.2)" : "none",
-                }}
-              >
-                <div style={{ marginBottom: "16px" }}>
-                  <h3 style={{ color: "#f3f4f6", fontSize: "18px", fontWeight: "600", margin: "0 0 8px 0" }}>
-                    🌾 {schedule.crop_type || "Crop"}
-                  </h3>
-                  <p style={{ color: "#9ca3af", fontSize: "13px", margin: 0 }}>
-                    Farm ID: {schedule.farm_id}
-                  </p>
-                </div>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "12px",
-                    marginBottom: "16px",
-                    padding: "12px",
-                    background: "#111827",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <div>
-                    <p style={{ color: "#9ca3af", fontSize: "12px", margin: "0 0 4px 0" }}>Sowing</p>
-                    <p style={{ color: "#10b981", fontSize: "14px", fontWeight: "600", margin: 0 }}>
-                      {new Date(schedule.sowing_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={{ color: "#9ca3af", fontSize: "12px", margin: "0 0 4px 0" }}>Harvest</p>
-                    <p style={{ color: "#f97316", fontSize: "14px", fontWeight: "600", margin: 0 }}>
-                      {new Date(schedule.harvest_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ borderTop: "1px solid #374151", paddingTop: "12px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                    <span style={{ color: "#9ca3af", fontSize: "12px" }}>Water Needed</span>
-                    <span style={{ color: "#60a5fa", fontSize: "13px", fontWeight: "600" }}>
-                      {schedule.total_water_needed || "N/A"} mm
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#9ca3af", fontSize: "12px" }}>Frequency</span>
-                    <span style={{ color: "#a78bfa", fontSize: "13px", fontWeight: "600" }}>
-                      {schedule.irrigation_frequency || "N/A"} days
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  style={{
-                    marginTop: "12px",
-                    width: "100%",
-                    padding: "10px",
-                    background: "#10b981",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                    fontSize: "13px",
-                  }}
-                >
-                  View Details →
-                </button>
+        {/* Tab Content */}
+        {activeTab === 'schedule' && (
+          <div className="schedule-tab">
+            <h3>7-Day Irrigation Schedule</h3>
+            <div className="schedule-table">
+              <div className="table-header">
+                <div className="table-cell">Day</div>
+                <div className="table-cell">Date</div>
+                <div className="table-cell">Irrigation</div>
+                <div className="table-cell">Water Amount</div>
+                <div className="table-cell">Sessions</div>
+                <div className="table-cell">Status</div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div
-            style={{
-              background: "#1f2937",
-              border: "1px solid #374151",
-              borderRadius: "12px",
-              padding: "30px",
-            }}
-          >
-            <div style={{ color: "#d1d5db", textAlign: "center", padding: "40px 20px" }}>
-              <div style={{ fontSize: "32px", marginBottom: "16px" }}>📊</div>
-              <p>Calendar view will display irrigation schedule timeline</p>
-              <p style={{ color: "#9ca3af", fontSize: "13px", marginTop: "8px" }}>
-                showing optimal watering dates and amounts
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Detailed View */}
-        {selectedSchedule && (
-          <div
-            style={{
-              marginTop: "32px",
-              background: "#1f2937",
-              border: "1px solid #10b981",
-              borderRadius: "12px",
-              padding: "24px",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h2 style={{ color: "#f3f4f6", fontSize: "20px", fontWeight: "600", margin: 0 }}>
-                Schedule Details: {selectedSchedule.crop_type}
-              </h2>
-              <button
-                onClick={() => setSelectedSchedule(null)}
-                style={{
-                  background: "transparent",
-                  border: "1px solid #374151",
-                  color: "#9ca3af",
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                }}
-              >
-                ✕ Close
-              </button>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "20px",
-              }}
-            >
-              <div style={{ background: "#111827", padding: "16px", borderRadius: "8px" }}>
-                <p style={{ color: "#9ca3af", fontSize: "12px", margin: "0 0 8px 0" }}>Sowing Date</p>
-                <p style={{ color: "#10b981", fontSize: "18px", fontWeight: "700", margin: 0 }}>
-                  {new Date(selectedSchedule.sowing_date).toLocaleDateString()}
-                </p>
-              </div>
-
-              <div style={{ background: "#111827", padding: "16px", borderRadius: "8px" }}>
-                <p style={{ color: "#9ca3af", fontSize: "12px", margin: "0 0 8px 0" }}>Harvest Date</p>
-                <p style={{ color: "#f97316", fontSize: "18px", fontWeight: "700", margin: 0 }}>
-                  {new Date(selectedSchedule.harvest_date).toLocaleDateString()}
-                </p>
-              </div>
-
-              <div style={{ background: "#111827", padding: "16px", borderRadius: "8px" }}>
-                <p style={{ color: "#9ca3af", fontSize: "12px", margin: "0 0 8px 0" }}>Total Water Needed</p>
-                <p style={{ color: "#60a5fa", fontSize: "18px", fontWeight: "700", margin: 0 }}>
-                  {selectedSchedule.total_water_needed || "N/A"} mm
-                </p>
-              </div>
-
-              <div style={{ background: "#111827", padding: "16px", borderRadius: "8px" }}>
-                <p style={{ color: "#9ca3af", fontSize: "12px", margin: "0 0 8px 0" }}>Irrigation Frequency</p>
-                <p style={{ color: "#a78bfa", fontSize: "18px", fontWeight: "700", margin: 0 }}>
-                  Every {selectedSchedule.irrigation_frequency || "N/A"} days
-                </p>
-              </div>
-
-              <div style={{ background: "#111827", padding: "16px", borderRadius: "8px" }}>
-                <p style={{ color: "#9ca3af", fontSize: "12px", margin: "0 0 8px 0" }}>Crop Growth Days</p>
-                <p style={{ color: "#fb923c", fontSize: "18px", fontWeight: "700", margin: 0 }}>
-                  {selectedSchedule.crop_growth_days || "N/A"} days
-                </p>
-              </div>
-
-              <div style={{ background: "#111827", padding: "16px", borderRadius: "8px" }}>
-                <p style={{ color: "#9ca3af", fontSize: "12px", margin: "0 0 8px 0" }}>Region</p>
-                <p style={{ color: "#e5e7eb", fontSize: "18px", fontWeight: "700", margin: 0 }}>
-                  {selectedSchedule.region || "N/A"}
-                </p>
-              </div>
-            </div>
-
-            {selectedSchedule.irrigation_dates && selectedSchedule.irrigation_dates.length > 0 && (
-              <div style={{ marginTop: "20px" }}>
-                <h3 style={{ color: "#e5e7eb", fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
-                  📍 Recommended Irrigation Dates:
-                </h3>
-                <div
-                  style={{
-                    background: "#111827",
-                    padding: "16px",
-                    borderRadius: "8px",
-                    maxHeight: "300px",
-                    overflowY: "auto",
-                  }}
-                >
-                  {selectedSchedule.irrigation_dates.map((date, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "10px 0",
-                        borderBottom: idx !== selectedSchedule.irrigation_dates.length - 1 ? "1px solid #374151" : "none",
-                      }}
-                    >
-                      <span style={{ color: "#d1d5db", fontSize: "14px" }}>
-                        {new Date(date).toLocaleDateString()}
-                      </span>
+              {plan.schedule?.map((day, index) => {
+                const dayStatus = getIrrigationStatus(day);
+                return (
+                  <div key={index} className="table-row">
+                    <div className="table-cell">Day {day.day}</div>
+                    <div className="table-cell">{formatDate(day.date)}</div>
+                    <div className="table-cell">
+                      {day.should_irrigate ? '✅ Yes' : '❌ No'}
+                    </div>
+                    <div className="table-cell">{day.water_amount}L</div>
+                    <div className="table-cell">
+                      {day.sessions && day.sessions.length > 0 ? (
+                        <div className="sessions-list">
+                          {day.sessions.map((session, sIndex) => (
+                            <div key={sIndex} className="session-item">
+                              {formatTime(session.time)} ({session.duration_minutes}min)
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        'No sessions'
+                      )}
+                    </div>
+                    <div className="table-cell">
                       <span
-                        style={{
-                          background: "#10b981",
-                          color: "#fff",
-                          padding: "4px 12px",
-                          borderRadius: "20px",
-                          fontSize: "12px",
-                          fontWeight: "600",
-                        }}
+                        className="status-badge"
+                        style={{ backgroundColor: dayStatus.color }}
                       >
-                        💧 Irrigate
+                        {dayStatus.text}
                       </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
+
+        {activeTab === 'recommendations' && (
+          <div className="recommendations-tab">
+            <h3>🤖 AI Recommendations</h3>
+            <div className="recommendations-list">
+              {plan.recommendations?.map((rec, index) => (
+                <div key={index} className="recommendation-card">
+                  <div className="recommendation-header">
+                    <div className="recommendation-icon">
+                      {index === 0 ? '💧' : index === 1 ? '🌱' : '⚠️'}
+                    </div>
+                    <div className="recommendation-title">
+                      {rec.includes('Irrigate') ? 'Irrigation Guidelines' :
+                       rec.includes('Water') ? 'Water Management' :
+                       rec.includes('Monitor') ? 'Monitoring Tips' : 'General Advice'}
+                    </div>
+                  </div>
+                  <div className="recommendation-content">
+                    {rec}
+                  </div>
+                  <div className="recommendation-actions">
+                    <button className="action-button secondary">
+                      Learn More
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Plan Actions */}
+        <div className="plan-actions">
+          <button
+            onClick={() => navigate('/add-field')}
+            className="action-button secondary"
+          >
+            Create New Plan
+          </button>
+          <button className="action-button primary">
+            Export Schedule
+          </button>
+        </div>
       </div>
     </Layout>
   );
 }
 
 export default IrrigationSchedule;
+
+

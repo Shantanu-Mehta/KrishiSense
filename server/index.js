@@ -14,11 +14,13 @@ app.use(express.json());
 
 // Routes
 app.use('/api/data', require('./routes/Database'));
+app.use('/api/esp32', require('./routes/Esp32'));
+app.use('/api/irrigation', require('./routes/IrrigationPlan'));
 
 
 mongoose.connect(process.env.MONGO_URI, {
 
-  
+
 })
 .then(() => {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

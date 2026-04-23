@@ -81,10 +81,10 @@ function Home() {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                          <h3 style={{ margin: 0, color: '#f3f4f6', fontSize: 22, fontWeight: 700 }}>
+                          <h3 style={{ margin: 0, color: '#1b1b1b', fontSize: 22, fontWeight: 700 }}>
                             {issue.crop_type ? issue.crop_type.toUpperCase() : 'Crop'}
                           </h3>
-                          <div style={{ color: '#9ca3af', fontSize: 13, marginTop: 4 }}>{issue.region || '—'}</div>
+                          <div style={{ color: '#6b7280', fontSize: 13, marginTop: 4 }}>{issue.region || '—'}</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ fontSize: 12, color: issue.status ? '#10b981' : '#f97316', fontWeight: 700 }}>

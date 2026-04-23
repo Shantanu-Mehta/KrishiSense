@@ -1,63 +1,561 @@
-.schedule-card {
-  cursor: pointer;
-  transition: all 0.3s ease;
+/* Irrigation Schedule Page Styles */
+
+.irrigation-schedule-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
-.schedule-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
+.schedule-header {
+  text-align: center;
+  margin-bottom: 40px;
 }
 
-.schedule-card.active {
-  border-color: #10b981;
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+.schedule-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
 }
 
-.irrigation-dates {
+.schedule-header p {
+  font-size: 1.1rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Loading and Error States */
+.loading-spinner {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 20px;
 }
 
-.irrigation-date-badge {
-  display: inline-block;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #10b981;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner p {
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.error-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 20px;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 3rem;
+}
+
+.error-text {
+  font-size: 1.2rem;
+  color: #ef4444;
+  max-width: 400px;
+}
+
+.retry-button {
+  padding: 12px 24px;
+  background: #3b82f6;
   color: white;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.retry-button:hover {
+  background: #2563eb;
+}
+
+/* No Plans State */
+.no-plans {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+  gap: 20px;
+  text-align: center;
+}
+
+.no-plans-icon {
+  font-size: 4rem;
+}
+
+.no-plans h3 {
+  font-size: 1.5rem;
+  color: #111827;
+  margin: 0;
+}
+
+.no-plans p {
+  color: #6b7280;
+  max-width: 400px;
+  margin: 0;
+}
+
+.create-plan-button {
+  padding: 12px 24px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.create-plan-button:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+/* Schedule Content */
+.schedule-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* Plan Selector */
+.plan-selector {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.plan-selector h3 {
+  font-size: 1.25rem;
   font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px 0;
 }
 
-.date-picker-wrapper {
-  position: relative;
-}
-
-.date-picker-wrapper input[type="date"] {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  padding: 10px 12px;
-  background: #111827 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>') no-repeat 98% 50%;
-  background-size: 20px;
-  padding-right: 32px;
+.plan-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
   cursor: pointer;
 }
 
-.date-picker-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+.plan-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Plan Summary */
+.plan-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.summary-card,
+.validation-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.summary-card h3,
+.validation-card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 20px 0;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.summary-label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.summary-value {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Validation Results */
+.validation-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.validation-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid;
+}
+
+.validation-item.passed {
+  background: #f0fdf4;
+  border-color: #10b981;
+}
+
+.validation-item.failed {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+.validation-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.validation-content {
+  flex: 1;
+}
+
+.validation-message {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.validation-item.passed .validation-message {
+  color: #065f46;
+}
+
+.validation-item.failed .validation-message {
+  color: #dc2626;
+}
+
+.validation-details {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  gap: 4px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
   cursor: pointer;
-  border-radius: 4px;
-  margin-right: 2px;
-  opacity: 0;
+  transition: all 0.2s;
+  background: transparent;
+  color: #6b7280;
+}
+
+.tab-button.active {
+  background: #10b981;
+  color: white;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.tab-button:hover:not(.active) {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* Schedule Table */
+.schedule-tab,
+.recommendations-tab {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.schedule-tab h3,
+.recommendations-tab h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 20px 0;
+}
+
+.schedule-table {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table-header,
+.table-row {
+  display: grid;
+  grid-template-columns: 80px 120px 120px 100px 120px 140px;
+  gap: 0;
+}
+
+.table-header {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table-cell {
+  padding: 12px 16px;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.table-header .table-cell {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table-row {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-row:hover {
+  background: #f9fafb;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+  min-width: 80px;
+}
+
+.action-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-button.primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.action-button.primary:hover {
+  background: #2563eb;
+}
+
+.action-button.success {
+  background: #10b981;
+  color: white;
+}
+
+.action-button.success:hover {
+  background: #059669;
+}
+
+.action-button.secondary {
+  background: white;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.action-button.secondary:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Recommendations */
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.recommendation-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+  background: #f9fafb;
+}
+
+.recommendation-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.recommendation-icon {
+  font-size: 1.5rem;
+}
+
+.recommendation-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.recommendation-content {
+  color: #374151;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.recommendation-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Plan Actions */
+.plan-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  padding-top: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .table-header,
+  .table-row {
+    grid-template-columns: 70px 100px 100px 80px 100px 120px;
+  }
+
+  .table-cell {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
 }
 
 @media (max-width: 768px) {
-  .schedule-card {
+  .irrigation-schedule-container {
+    padding: 16px;
+  }
+
+  .schedule-header h1 {
+    font-size: 2rem;
+  }
+
+  .plan-summary {
     grid-template-columns: 1fr;
   }
 
-  .schedule-details-grid {
+  .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .summary-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .tab-navigation {
+    flex-direction: column;
+  }
+
+  .table-header,
+  .table-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .table-cell {
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+    justify-content: space-between;
+  }
+
+  .table-header .table-cell {
+    border-bottom: 1px solid #d1d5db;
+  }
+
+  .table-row .table-cell:last-child {
+    border-bottom: none;
+  }
+
+  .plan-actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .schedule-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .summary-card,
+  .validation-card,
+  .schedule-tab,
+  .recommendations-tab {
+    padding: 20px;
+  }
+
+  .recommendation-card {
+    padding: 16px;
+  }
+
+  .action-button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
   }
 }

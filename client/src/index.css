@@ -1,10 +1,10 @@
 :root {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Segoe UI', system-ui, sans-serif;
   line-height: 1.6;
   font-weight: 400;
 
-  color: #f3f4f6;
-  background-color: #111827;
+  color: #1b1b1b;
+  background-color: #f8fdf9;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -24,38 +24,38 @@ html, body {
 }
 
 body {
-  background-color: #111827;
-  color: #f3f4f6;
+  background-color: #f8fdf9;
+  color: #1b1b1b;
 }
 
 a {
   font-weight: 500;
-  color: #10b981;
+  color: #2d6a4f;
   text-decoration: none;
   transition: color 0.3s ease;
 }
 
 a:hover {
-  color: #34d399;
+  color: #52b788;
 }
 
 button {
   font-family: inherit;
-  padding: 0.6em 1.2em;
+  padding: 10px 20px;
   font-size: 1em;
-  font-weight: 500;
+  font-weight: 600;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  background-color: #10b981;
+  background-color: #2d6a4f;
   color: white;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 button:hover {
-  background-color: #059669;
+  background-color: #52b788;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 4px 12px rgba(45, 106, 79, 0.3);
 }
 
 button:active {
@@ -64,25 +64,26 @@ button:active {
 
 input, textarea, select {
   font-family: inherit;
-  background-color: #1f2937;
-  color: #f3f4f6;
-  border: 1px solid #374151;
-  border-radius: 6px;
+  background-color: #ffffff;
+  color: #1b1b1b;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
   padding: 8px 12px;
   transition: all 0.3s ease;
 }
 
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
 }
 
 input::placeholder {
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   line-height: 1.2;
+  color: #1b1b1b;
 }

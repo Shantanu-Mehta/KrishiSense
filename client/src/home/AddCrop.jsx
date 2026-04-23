@@ -1,399 +1,376 @@
-import React from 'react';
-import { useState } from 'react';
-import axios from 'axios';
-import Layout from '../components/Layout';
-import './AddCrop.css';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Layout from "../components/Layout";
+import "./AddCrop.css";
 
 function AddCrop() {
-  const [msg, setMsg] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  
-  
-  // Form fields - User input fields
-  const [farm_id, setFarm_id] = useState('');
-  const [region, setRegion] = useState('');
-  const [crop_type, setCrop_type] = useState('');
-  const [soil_type, setSoil_type] = useState('');
-  const [sowing_date, setSowing_date] = useState('');
-  const [harvest_date, setHarvest_date] = useState('');
-  const [photo, setPhoto] = useState(null);
-  const [status, setStatus] = useState(true);
-  
-  // Live sensor data - will be populated from IoT devices
-  const [sensorData, setSensorData] = useState({
-    soil_moisture_percent: 45.5,
-    soil_pH: 7.0,
-    temperature_C: 25.5,
-    rainfall_mm: 100,
-    humidity_percent: 65,
-    crop_growth_days: 120,
-    NDVI_index: 0.45
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    crop: '',
+    soilType: '',
+    sowingDate: '',
+    fieldArea: '',
+    city: '',
+    state: ''
   });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Farm ID is optional; backend will auto-generate if omitted
-    if (!region.trim()) {
-      setMsg('❌ Region is required');
-      return;
-    }
-    if (!crop_type) {
-      setMsg('❌ Crop Type is required');
-      return;
-    }
-    if (!soil_type) {
-      setMsg('❌ Soil Type is required');
-      return;
-    }
-    if (!sowing_date) {
-      setMsg('❌ Sowing Date is required');
-      return;
-    }
-    
-    setLoading(true);
-    setMsg('');
-    setSuccess(false);
+  const [esp32Data, setEsp32Data] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
+  const [validationErrors, setValidationErrors] = useState(null);
 
-    const formData = new FormData();
-    // User input fields
-    if (farm_id && farm_id.trim()) {
-      formData.append('farm_id', farm_id.trim());
-    }
-    formData.append('region', region.trim());
-    formData.append('crop_type', crop_type.toLowerCase().trim());
-    formData.append('soil_type', soil_type.toLowerCase().trim());
-    formData.append('sowing_date', sowing_date);
-    if (harvest_date) {
-      formData.append('harvest_date', harvest_date);
-    }
-    formData.append('status', status);
-    
-    // Live sensor data from IoT devices
-    formData.append('soil_moisture_%', sensorData.soil_moisture_percent);
-    formData.append('soil_pH', sensorData.soil_pH);
-    formData.append('temperature_C', sensorData.temperature_C);
-    formData.append('rainfall_mm', sensorData.rainfall_mm);
-    formData.append('humidity_%', sensorData.humidity_percent);
-    formData.append('crop_growth_days', sensorData.crop_growth_days);
-    formData.append('NDVI_index', sensorData.NDVI_index);
-    
-    if (photo) {
-      formData.append('photo', photo);
-    }
-
-    try {
-      const res = await axios.post('http://localhost:5000/api/data/crops', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      if (res.data.success) {
-        setSuccess(true);
-        setMsg('✓ Crop added successfully! Your AI irrigation schedule will be generated and displayed in "Irrigation Schedules" section.');
-        // Reset form
-        setFarm_id('');
-        setRegion('');
-        setCrop_type('');
-        setSoil_type('');
-        setSowing_date('');
-        setHarvest_date('');
-        setPhoto(null);
-        setTimeout(() => {
-          setSuccess(false);
-          setMsg('');
-        }, 5000);
-      } else {
-        setMsg('❌ ' + (res.data.message || 'Failed to add crop'));
+  // Fetch ESP32 data on component mount
+  useEffect(() => {
+    const fetchEsp32Data = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/esp32/latest/ESP32_FIELD_01');
+        if (response.ok) {
+          const data = await response.json();
+          setEsp32Data(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch ESP32 data:', error);
       }
-    } catch (err) {
-      const errorMsg = err.response?.data?.message || err.response?.data?.error?.message || err.message || 'Error adding crop';
-      console.error('Crop addition error:', err);
-      setMsg('❌ ' + errorMsg);
-    } finally {
-      setLoading(false);
+    };
+
+    fetchEsp32Data();
+  }, []);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+
+    // Clear validation errors when user starts typing
+    if (validationErrors) {
+      setValidationErrors(null);
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.crop.trim()) {
+      newErrors.crop = 'Crop type is required';
+    }
+
+    if (!formData.soilType) {
+      newErrors.soilType = 'Please select a soil type';
+    }
+
+    if (!formData.sowingDate) {
+      newErrors.sowingDate = 'Sowing date is required';
+    }
+
+    if (!formData.fieldArea || isNaN(formData.fieldArea) || formData.fieldArea <= 0) {
+      newErrors.fieldArea = 'Please enter a valid field area in acres';
+    }
+
+    if (!formData.city.trim()) {
+      newErrors.city = 'City is required';
+    }
+
+    if (!formData.state.trim()) {
+      newErrors.state = 'State is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSuccessMessage('');
+    setValidationErrors(null);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/irrigation/plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSuccessMessage('Irrigation plan created successfully! Redirecting to schedule view...');
+
+        // Store the plan data in localStorage for the IrrigationSchedule component
+        localStorage.setItem('irrigationPlan', JSON.stringify(data.plan));
+
+        // Reset form
+        setFormData({
+          crop: '',
+          soilType: '',
+          sowingDate: '',
+          fieldArea: '',
+          city: '',
+          state: ''
+        });
+
+        // Navigate to irrigation schedule after a delay
+        setTimeout(() => {
+          navigate('/schedules');
+        }, 2000);
+      } else {
+        // Handle validation errors
+        if (data.error === 'Validation failed' && data.validation) {
+          setValidationErrors(data.validation);
+        } else {
+          setErrors({
+            submit: data.error || 'Failed to create irrigation plan'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error creating irrigation plan:', error);
+      setErrors({
+        submit: 'Network error. Please check your connection and try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const cropTypes = [
+    'wheat', 'rice', 'cotton', 'sugarcane', 'maize', 'vegetables', 'fruits'
+  ];
+
+  const soilTypes = [
+    'loamy', 'sandy', 'clay', 'black', 'red'
+  ];
+
   return (
     <Layout>
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#f3f4f6', margin: '0 0 8px 0' }}>
-            Add New Crop
-          </h1>
-          <p style={{ color: '#9ca3af', fontSize: '14px', margin: 0 }}>
-            Register a new crop with essential details. Sensor data will be automatically populated from live IoT devices for intelligent ML-based irrigation scheduling.
-          </p>
-        </div>
+      <div className="add-crop-page">
+        <div className="add-crop-container">
+          {/* Page Header */}
+          <div className="page-header">
+            <div className="header-content">
+              <h1 className="page-title">🌾 Add New Crop</h1>
+              <p className="page-subtitle">Fill in your crop details to generate an irrigation plan</p>
+            </div>
+          </div>
 
-        <div
-          style={{
-            background: '#1f2937',
-            border: '1px solid #374151',
-            padding: '32px',
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-          }}
-        >
-          {msg && (
-            <div
-              style={{
-                marginBottom: '20px',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                background: success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                color: success ? '#10b981' : '#ef4444',
-                border: `1px solid ${success ? '#10b981' : '#ef4444'}`,
-                fontSize: '14px',
-              }}
-            >
-              {msg}
+          {/* Success Message */}
+          {successMessage && (
+            <div className="success-banner">
+              <div className="success-icon">✅</div>
+              <div className="success-text">{successMessage}</div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Farm ID (optional) */}
-            <div>
-              <label style={{ fontWeight: '500', color: '#e5e7eb', marginBottom: '6px', display: 'block', fontSize: '14px' }}>
-                Farm ID (optional)
-              </label>
-              <input
-                type="text"
-                value={farm_id}
-                onChange={(e) => setFarm_id(e.target.value)}
-                placeholder="Leave empty to auto-generate"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  color: '#f3f4f6',
-                  border: '1px solid #374151',
-                  borderRadius: '6px',
-                  background: '#111827',
-                  fontSize: '14px',
-                  boxSizing: 'border-box'
-                }}
-              />
+          {/* Validation Errors */}
+          {validationErrors && (
+            <div className="validation-error-banner">
+              <div className="error-icon">⚠️</div>
+              <div className="error-content">
+                <h3>Validation Failed</h3>
+                <p><strong>Failed at:</strong> {validationErrors.failedAt}</p>
+                <p><strong>Reason:</strong> {validationErrors.reason}</p>
+                <p><strong>Suggestion:</strong> {validationErrors.suggestion}</p>
+                <div className="validation-checks">
+                  <h4>Validation Checks:</h4>
+                  <ul>
+                    {Object.entries(validationErrors.checks).map(([key, check]) => (
+                      <li key={key}>
+                        <span className={check.passed ? 'check-passed' : 'check-failed'}>
+                          {check.passed ? '✅' : '❌'} {key}: {check.note}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             </div>
+          )}
 
-            {/* Region */}
-            <div>
-              <label style={{ fontWeight: '500', color: '#e5e7eb', marginBottom: '6px', display: 'block', fontSize: '14px' }}>
-                Region *
-              </label>
-              <input
-                type="text"
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                placeholder="e.g., North India, Punjab"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  color: '#f3f4f6',
-                  border: '1px solid #374151',
-                  borderRadius: '6px',
-                  background: '#111827',
-                  fontSize: '14px',
-                  boxSizing: 'border-box'
-                }}
-                required
-              />
-            </div>
+          {/* Main Form Card */}
+          <div className="form-card">
+            <form onSubmit={handleSubmit} className="crop-form">
+              {/* Section A — Crop Information */}
+              <div className="form-section">
+                <div className="section-header">
+                  <h2 className="section-title">🌾 Crop Information</h2>
+                  <div className="section-divider"></div>
+                </div>
 
-            {/* Crop Type */}
-            <div>
-              <label style={{ fontWeight: '500', color: '#e5e7eb', marginBottom: '6px', display: 'block', fontSize: '14px' }}>
-                Crop Type *
-              </label>
-              <select
-                value={crop_type}
-                onChange={(e) => setCrop_type(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  color: '#f3f4f6',
-                  border: '1px solid #374151',
-                  borderRadius: '6px',
-                  background: '#111827',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  boxSizing: 'border-box'
-                }}
-                required
-              >
-                <option value="">Select Crop Type</option>
-                <option value="rice">Rice</option>
-                <option value="wheat">Wheat</option>
-                <option value="maize">Maize</option>
-                <option value="groundnut">Groundnut</option>
-                <option value="cotton">Cotton</option>
-              </select>
-            </div>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="crop">Crop Type *</label>
+                    <select
+                      id="crop"
+                      name="crop"
+                      value={formData.crop}
+                      onChange={handleInputChange}
+                      className={errors.crop ? 'error' : ''}
+                    >
+                      <option value="">Select crop type</option>
+                      {cropTypes.map(type => (
+                        <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+                      ))}
+                    </select>
+                    {errors.crop && <span className="error-message">{errors.crop}</span>}
+                  </div>
 
-            {/* Soil Type */}
-            <div>
-              <label style={{ fontWeight: '500', color: '#e5e7eb', marginBottom: '6px', display: 'block', fontSize: '14px' }}>
-                Soil Type *
-              </label>
-              <select
-                value={soil_type}
-                onChange={(e) => setSoil_type(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  color: '#f3f4f6',
-                  border: '1px solid #374151',
-                  borderRadius: '6px',
-                  background: '#111827',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  boxSizing: 'border-box'
-                }}
-                required
-              >
-                <option value="">Select Soil Type</option>
-                <option value="sandy">Sandy</option>
-                <option value="clayey">Clayey</option>
-                <option value="loamy">Loamy</option>
-                <option value="alluvial">Alluvial</option>
-                <option value="laterite">Laterite</option>
-                <option value="black">Black Soil</option>
-              </select>
-            </div>
+                  <div className="form-group">
+                    <label htmlFor="soilType">Soil Type *</label>
+                    <select
+                      id="soilType"
+                      name="soilType"
+                      value={formData.soilType}
+                      onChange={handleInputChange}
+                      className={errors.soilType ? 'error' : ''}
+                    >
+                      <option value="">Select soil type</option>
+                      {soilTypes.map(type => (
+                        <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+                      ))}
+                    </select>
+                    {errors.soilType && <span className="error-message">{errors.soilType}</span>}
+                  </div>
 
-            {/* Sowing Date */}
-            <div>
-              <label style={{ fontWeight: '500', color: '#e5e7eb', marginBottom: '6px', display: 'block', fontSize: '14px' }}>
-                📅 Sowing Date *
-              </label>
-              <input
-                type="date"
-                value={sowing_date}
-                onChange={(e) => setSowing_date(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  paddingRight: '36px',
-                  color: '#f3f4f6',
-                  border: '1px solid #374151',
-                  borderRadius: '6px',
-                  background: '#111827',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                  cursor: 'pointer',
-                  backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%2710b981%27 stroke-width=%272%27%3e%3crect x=%273%27 y=%274%27 width=%2718%27 height=%2718%27 rx=%272%27 ry=%272%27%3e%3c/rect%3e%3cline x1=%2716%27 y1=%272%27 x2=%2716%27 y2=%276%27%3e%3c/line%3e%3cline x1=%278%27 y1=%272%27 x2=%278%27 y2=%276%27%3e%3c/line%3e%3cline x1=%273%27 y1=%2710%27 x2=%2721%27 y2=%2710%27%3e%3c/line%3e%3c/svg%3e")',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 8px center',
-                  backgroundSize: '20px',
-                }}
-                required
-              />
-            </div>
+                  <div className="form-group">
+                    <label htmlFor="sowingDate">Sowing Date *</label>
+                    <input
+                      type="date"
+                      id="sowingDate"
+                      name="sowingDate"
+                      value={formData.sowingDate}
+                      onChange={handleInputChange}
+                      className={errors.sowingDate ? 'error' : ''}
+                    />
+                    {errors.sowingDate && <span className="error-message">{errors.sowingDate}</span>}
+                  </div>
 
-            {/* Harvest Date */}
-            <div>
-              <label style={{ fontWeight: '500', color: '#e5e7eb', marginBottom: '6px', display: 'block', fontSize: '14px' }}>
-                📅 Expected Harvest Date
-              </label>
-              <input
-                type="date"
-                value={harvest_date}
-                onChange={(e) => setHarvest_date(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  paddingRight: '36px',
-                  color: '#f3f4f6',
-                  border: '1px solid #374151',
-                  borderRadius: '6px',
-                  background: '#111827',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                  cursor: 'pointer',
-                  backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27f97316%27 stroke-width=%272%27%3e%3crect x=%273%27 y=%274%27 width=%2718%27 height=%2718%27 rx=%272%27 ry=%272%27%3e%3c/rect%3e%3cline x1=%2716%27 y1=%272%27 x2=%2716%27 y2=%276%27%3e%3c/line%3e%3cline x1=%278%27 y1=%272%27 x2=%278%27 y2=%276%27%3e%3c/line%3e%3cline x1=%273%27 y1=%2710%27 x2=%2721%27 y2=%2710%27%3e%3c/line%3e%3c/svg%3e")',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 8px center',
-                  backgroundSize: '20px',
-                }}
-              />
-            </div>
+                  <div className="form-group">
+                    <label htmlFor="fieldArea">Field Area (acres) *</label>
+                    <input
+                      type="number"
+                      id="fieldArea"
+                      name="fieldArea"
+                      value={formData.fieldArea}
+                      onChange={handleInputChange}
+                      placeholder="e.g., 2.5"
+                      min="0.1"
+                      step="0.1"
+                      className={errors.fieldArea ? 'error' : ''}
+                    />
+                    {errors.fieldArea && <span className="error-message">{errors.fieldArea}</span>}
+                  </div>
+                </div>
+              </div>
 
-            {/* Crop Photo */}
-            <div>
-              <label style={{ fontWeight: '500', color: '#e5e7eb', marginBottom: '6px', display: 'block', fontSize: '14px' }}>
-                Crop Photo
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setPhoto(e.target.files[0])}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  color: '#9ca3af',
-                  border: '2px dashed #374151',
-                  borderRadius: '6px',
-                  background: '#111827',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  boxSizing: 'border-box'
-                }}
-              />
-              {photo && (
-                <p style={{ color: '#10b981', fontSize: '13px', marginTop: '6px' }}>
-                  ✓ {photo.name}
-                </p>
+              {/* Section B — Location Details */}
+              <div className="form-section">
+                <div className="section-header">
+                  <h2 className="section-title">📍 Location Details</h2>
+                  <div className="section-divider"></div>
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="city">City *</label>
+                    <input
+                      type="text"
+                      id="city"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Amritsar"
+                      className={errors.city ? 'error' : ''}
+                    />
+                    {errors.city && <span className="error-message">{errors.city}</span>}
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="state">State *</label>
+                    <input
+                      type="text"
+                      id="state"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Punjab"
+                      className={errors.state ? 'error' : ''}
+                    />
+                    {errors.state && <span className="error-message">{errors.state}</span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* ESP32 Data Display */}
+              {esp32Data && (
+                <div className="form-section">
+                  <div className="section-header">
+                    <h2 className="section-title">📊 Current Sensor Data</h2>
+                    <div className="section-divider"></div>
+                  </div>
+                  <div className="sensor-data-grid">
+                    <div className="sensor-item">
+                      <span className="sensor-label">Temperature:</span>
+                      <span className="sensor-value">{esp32Data.temperature}°C</span>
+                    </div>
+                    <div className="sensor-item">
+                      <span className="sensor-label">Humidity:</span>
+                      <span className="sensor-value">{esp32Data.humidity}%</span>
+                    </div>
+                    <div className="sensor-item">
+                      <span className="sensor-label">Soil Moisture:</span>
+                      <span className="sensor-value">{esp32Data.soil_moisture}%</span>
+                    </div>
+                    <div className="sensor-item">
+                      <span className="sensor-label">Water Level:</span>
+                      <span className="sensor-value">{esp32Data.water_level}%</span>
+                    </div>
+                  </div>
+                </div>
               )}
-            </div>
 
-            {/* Status */}
-            <div>
-              <label style={{ fontWeight: '500', color: '#e5e7eb', marginBottom: '6px', display: 'block', fontSize: '14px' }}>
-                Status
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value === 'true')}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  color: '#f3f4f6',
-                  border: '1px solid #374151',
-                  borderRadius: '6px',
-                  background: '#111827',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </select>
-            </div>
+              {/* Submit Error */}
+              {errors.submit && (
+                <div className="error-banner">{errors.submit}</div>
+              )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                marginTop: '16px',
-                padding: '12px 24px',
-                background: loading ? '#6b7280' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: '#fff',
-                borderRadius: '8px',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                border: 'none',
-                transition: 'all 0.3s ease',
-                opacity: loading ? 0.6 : 1,
-                fontSize: '15px'
-              }}
-            >
-              {loading ? 'Adding Crop...' : 'Add Crop'}
-            </button>
-          </form>
+              {/* Form Actions */}
+              <div className="form-actions">
+                <button
+                  type="button"
+                  onClick={() => window.history.back()}
+                  className="btn-secondary"
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Creating Plan...' : '🚀 Generate Irrigation Plan'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </Layout>
@@ -401,3 +378,4 @@ function AddCrop() {
 }
 
 export default AddCrop;
+            

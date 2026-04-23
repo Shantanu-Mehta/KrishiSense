@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const path = require('path');
+const os = require('os');
 
 /**
  * Call Python ML model to make predictions
@@ -12,8 +13,13 @@ const callMLModel = async (cropData) => {
       // Path to Python script
       const pythonScript = path.join(__dirname, '../ml/predict.py');
       
+      // Use .venv Python path
+      const pythonPath = os.platform() === 'win32' 
+        ? path.join(__dirname, '../../.venv/Scripts/python.exe')
+        : path.join(__dirname, '../../.venv/bin/python');
+      
       // Spawn Python process
-      const pythonProcess = spawn('python', [pythonScript, JSON.stringify(cropData)]);
+      const pythonProcess = spawn(pythonPath, [pythonScript, JSON.stringify(cropData)]);
       
       let output = '';
       let error = '';
@@ -56,6 +62,65 @@ const callMLModel = async (cropData) => {
 
     } catch (error) {
       reject(error);
+    }
+  });
+};
+
+/**
+ * Run ML prediction for ESP32 sensor data
+ * @param {Object} inputData - Sensor data from ESP32
+ * @returns {Promise<Object>} - { should_irrigate: boolean, water_amount: number }
+ */
+const runMLPrediction = async (inputData) => {
+  return new Promise((resolve) => {
+    try {
+      // Path to Python script
+      const pythonScript = path.join(__dirname, '../ml/predict.py');
+      
+      // Use .venv Python path
+      const pythonPath = os.platform() === 'win32' 
+        ? path.join(__dirname, '../../.venv/Scripts/python.exe')
+        : path.join(__dirname, '../../.venv/bin/python');
+      
+      // Spawn Python process
+      const pythonProcess = spawn(pythonPath, [pythonScript, JSON.stringify(inputData)]);
+      
+      let output = '';
+      let error = '';
+
+      // Collect stdout
+      pythonProcess.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      // Collect stderr
+      pythonProcess.stderr.on('data', (data) => {
+        error += data.toString();
+      });
+
+      // Handle process completion
+      pythonProcess.on('close', (code) => {
+        try {
+          const result = JSON.parse(output.trim());
+          resolve({
+            should_irrigate: result.should_irrigate || false,
+            water_amount: result.water_amount || 0
+          });
+        } catch (e) {
+          console.error('Failed to parse ML output:', output, 'Error:', error);
+          resolve({ should_irrigate: false, water_amount: 0 });
+        }
+      });
+
+      // Handle process errors
+      pythonProcess.on('error', (err) => {
+        console.error('Failed to spawn Python process:', err.message);
+        resolve({ should_irrigate: false, water_amount: 0 });
+      });
+
+    } catch (error) {
+      console.error('Error in runMLPrediction:', error);
+      resolve({ should_irrigate: false, water_amount: 0 });
     }
   });
 };
@@ -208,5 +273,6 @@ module.exports = {
   callMLModel,
   generateScheduleFromML,
   processCropWithML,
-  optimizeSchedule
+  optimizeSchedule,
+  runMLPrediction
 };
