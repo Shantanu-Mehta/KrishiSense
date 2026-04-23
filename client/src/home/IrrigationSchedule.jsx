@@ -40,6 +40,21 @@ function IrrigationSchedule() {
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
+  const getTodaysWaterAmount = (plan) => {
+    const today = new Date().toISOString().split('T')[0];
+    const todaysSchedule = plan.schedule?.find(day => day.date === today);
+    
+    if (!todaysSchedule || !todaysSchedule.should_irrigate || !todaysSchedule.sessions) {
+      return 0;
+    }
+    
+    const sessionsToday = todaysSchedule.sessions.length;
+    const waterPerSession = plan.water_amount_per_session || 0;
+    const fieldArea = plan.field_area || 1; // Default to 1 acre if not specified
+    
+    return sessionsToday * waterPerSession * fieldArea;
+  };
+
   const getIrrigationStatus = (dayData) => {
     const today = new Date().toISOString().split('T')[0];
     const dayDate = dayData.date;
@@ -125,6 +140,10 @@ function IrrigationSchedule() {
               <div className="summary-item">
                 <span className="summary-label">Water per Session:</span>
                 <span className="summary-value">{plan.water_amount_per_session}L</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Today's Total Water:</span>
+                <span className="summary-value">{getTodaysWaterAmount(plan)}L</span>
               </div>
             </div>
           </div>

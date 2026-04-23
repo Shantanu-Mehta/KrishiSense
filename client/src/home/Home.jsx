@@ -1,19 +1,21 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import "./Home.css";
 
 function Home() {
+  const navigate = useNavigate();
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchIssues = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/data/forms?status=true");
+      const res = await axios.get("http://localhost:5000/api/data/plans");
       setIssues(res.data);
     } catch (error) {
-      console.error("Error fetching irrigation zones:", error);
+      console.error("Error fetching irrigation plans:", error);
     } finally {
       setLoading(false);
     }
@@ -90,6 +92,16 @@ function Home() {
                           <div style={{ fontSize: 12, color: issue.status ? '#10b981' : '#f97316', fontWeight: 700 }}>
                             {issue.status ? '🟢 Active' : '🔴 Inactive'}
                           </div>
+                          <div style={{
+                            fontSize: 11,
+                            color: issue.pump_status === 'running' ? '#ef4444' :
+                                   issue.pump_status === 'idle' ? '#f59e0b' : '#6b7280',
+                            fontWeight: 600,
+                            marginTop: 2
+                          }}>
+                            Pump: {issue.pump_status === 'running' ? '🏃 Running' :
+                                   issue.pump_status === 'idle' ? '⏸️ Idle' : '🔌 Offline'}
+                          </div>
                           <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>
                             Added: {formatDate(issue.createdAt)}
                           </div>
@@ -144,6 +156,52 @@ function Home() {
                           ⏳ Predictions pending...
                         </div>
                       )}
+
+                      {issue.sensor_data && (
+                        <div style={{ marginTop: 16, backgroundColor: '#1e293b', padding: 12, borderRadius: 8, border: '1px solid #334155' }}>
+                          <div style={{ color: '#60a5fa', fontSize: 12, fontWeight: 600, marginBottom: 8 }}>🌡️ Live Sensor Data</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                            <div style={{ color: '#cbd5e1', fontSize: 11 }}>
+                              <div style={{ color: '#94a3b8', fontSize: 10 }}>Temperature</div>
+                              <div style={{ fontWeight: 600 }}>{issue.sensor_data.temperature}°C</div>
+                            </div>
+                            <div style={{ color: '#cbd5e1', fontSize: 11 }}>
+                              <div style={{ color: '#94a3b8', fontSize: 10 }}>Humidity</div>
+                              <div style={{ fontWeight: 600 }}>{issue.sensor_data.humidity}%</div>
+                            </div>
+                            <div style={{ color: '#cbd5e1', fontSize: 11 }}>
+                              <div style={{ color: '#94a3b8', fontSize: 10 }}>Soil Moisture</div>
+                              <div style={{ fontWeight: 600 }}>{issue.sensor_data.soil_moisture}%</div>
+                            </div>
+                            <div style={{ color: '#cbd5e1', fontSize: 11 }}>
+                              <div style={{ color: '#94a3b8', fontSize: 10 }}>Water Level</div>
+                              <div style={{ fontWeight: 600 }}>{issue.sensor_data.water_level}%</div>
+                            </div>
+                          </div>
+                          <div style={{ color: '#64748b', fontSize: 10, marginTop: 8 }}>
+                            Last update: {new Date(issue.sensor_data.last_update).toLocaleTimeString()}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => navigate('/schedules')}
+                          style={{
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            padding: '8px 16px',
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          📅 View Schedule
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

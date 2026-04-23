@@ -108,6 +108,7 @@ const runMLPrediction = async (inputData) => {
           });
         } catch (e) {
           console.error('Failed to parse ML output:', output, 'Error:', error);
+          // Provide fallback values when ML fails
           resolve({ should_irrigate: false, water_amount: 0 });
         }
       });

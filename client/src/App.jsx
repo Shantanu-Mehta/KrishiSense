@@ -4,7 +4,6 @@ import Home from './home/Home';
 import AddCrop from './home/AddCrop.jsx';
 import PreviousReport from './home/PreviousReport.jsx';
 import DeviceStatus from './home/DeviceStatus.jsx';
-import Analytics from './home/Analytics.jsx';
 import Alerts from './home/Alerts.jsx';
 import IrrigationSchedule from './home/IrrigationSchedule.jsx';
 import './App.css'
@@ -18,7 +17,6 @@ function App() {
         <Route path="/schedules" element={<IrrigationSchedule />} />
         <Route path="/history" element={<PreviousReport />} />
         <Route path="/device-status" element={<DeviceStatus />} />
-        <Route path="/analytics" element={<Analytics />} />
         <Route path="/alerts" element={<Alerts />} />
       </Routes>
     </BrowserRouter>

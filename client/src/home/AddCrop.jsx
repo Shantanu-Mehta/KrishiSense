@@ -319,32 +319,30 @@ function AddCrop() {
               </div>
 
               {/* ESP32 Data Display */}
-              {esp32Data && (
-                <div className="form-section">
-                  <div className="section-header">
-                    <h2 className="section-title">📊 Current Sensor Data</h2>
-                    <div className="section-divider"></div>
+              <div className="form-section">
+                <div className="section-header">
+                  <h2 className="section-title">📊 Current Sensor Data</h2>
+                  <div className="section-divider"></div>
+                </div>
+                <div className="sensor-data-grid">
+                  <div className="sensor-item">
+                    <span className="sensor-label">Temperature:</span>
+                    <span className="sensor-value">{esp32Data ? `${esp32Data.temperature}°C` : 'OFF'}</span>
                   </div>
-                  <div className="sensor-data-grid">
-                    <div className="sensor-item">
-                      <span className="sensor-label">Temperature:</span>
-                      <span className="sensor-value">{esp32Data.temperature}°C</span>
-                    </div>
-                    <div className="sensor-item">
-                      <span className="sensor-label">Humidity:</span>
-                      <span className="sensor-value">{esp32Data.humidity}%</span>
-                    </div>
-                    <div className="sensor-item">
-                      <span className="sensor-label">Soil Moisture:</span>
-                      <span className="sensor-value">{esp32Data.soil_moisture}%</span>
-                    </div>
-                    <div className="sensor-item">
-                      <span className="sensor-label">Water Level:</span>
-                      <span className="sensor-value">{esp32Data.water_level}%</span>
-                    </div>
+                  <div className="sensor-item">
+                    <span className="sensor-label">Humidity:</span>
+                    <span className="sensor-value">{esp32Data ? `${esp32Data.humidity}%` : 'OFF'}</span>
+                  </div>
+                  <div className="sensor-item">
+                    <span className="sensor-label">Soil Moisture:</span>
+                    <span className="sensor-value">{esp32Data ? `${esp32Data.soil_moisture}%` : 'OFF'}</span>
+                  </div>
+                  <div className="sensor-item">
+                    <span className="sensor-label">Water Level:</span>
+                    <span className="sensor-value">{esp32Data ? `${esp32Data.water_level}%` : 'OFF'}</span>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Submit Error */}
               {errors.submit && (

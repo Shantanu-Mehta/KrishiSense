@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Crop Validation Service
  * Performs intermediate logic checks before calling ML model
  */
@@ -21,6 +21,16 @@ const SOIL_CROP_COMPATIBILITY = {
   maize: ["loamy", "sandy", "red"],
   vegetables: ["loamy", "sandy", "red"],
   fruits: ["loamy", "red", "black"]
+};
+
+const TEMPERATURE_RANGES = {
+  wheat: { min: 10, max: 25 },
+  rice: { min: 20, max: 35 },
+  cotton: { min: 20, max: 35 },
+  sugarcane: { min: 20, max: 38 },
+  maize: { min: 15, max: 35 },
+  vegetables: { min: 10, max: 35 },
+  fruits: { min: 10, max: 40 }
 };
 
 /**
@@ -283,7 +293,6 @@ function validateAndPlan(input) {
   }
 
   // 4. Location Check
-  // For now, assume all locations are valid unless specific restrictions
   checks.location = { passed: true, note: "No regional restrictions" };
 
   if (failedAt) {
@@ -296,7 +305,6 @@ function validateAndPlan(input) {
     };
   }
 
-  // All checks passed
   return {
     passed: true,
     checks,
@@ -319,124 +327,4 @@ module.exports = {
   getCurrentSeason,
   getCropRecommendations,
   validateAndPlan
-};
-      checks.temperature = "✅";
-    } else if (tempRange) {
-      if (!failedCheck) failedCheck = "temperature";
-      if (!reason) {
-        reason = `Current temperature ${temperature}°C is ${temperature < tempRange.min ? 'too low' : 'too high'} for ${crop_type}. ${crop_type.charAt(0).toUpperCase() + crop_type.slice(1)} requires ${tempRange.min}–${tempRange.max}°C for healthy growth.`;
-      }
-    } else {
-      checks.temperature = "✅"; // No range defined, assume OK
-    }
-  } else {
-    checks.temperature = "⚠️"; // No temperature data
-    warnings.push("Temperature data not available for validation");
-  }
-
-  // 4. Soil Moisture Check
-  if (soil_moisture !== null && soil_moisture !== undefined) {
-    if (soil_moisture > 85) {
-      if (!failedCheck) failedCheck = "moisture";
-      if (!reason) {
-        reason = `Soil moisture is already at ${soil_moisture}%. No irrigation needed currently. Re-check in 24 hours.`;
-      }
-    } else {
-      checks.moisture = "✅";
-    }
-  } else {
-    checks.moisture = "⚠️"; // No moisture data
-    warnings.push("Soil moisture data not available for validation");
-  }
-
-  const passed = !failedCheck;
-
-  return {
-    passed,
-    reason,
-    failedCheck,
-    checks,
-    warnings,
-    currentSeason,
-    recommendations: passed ? getCropRecommendations(crop_type) : []
-  };
-}
-
-/**
- * Get sowing months for a season
- * @param {string} season
- * @returns {string}
- */
-function getSeasonMonths(season) {
-  const months = {
-    Kharif: "June–October",
-    Rabi: "November–March",
-    Zaid: "April–May"
-  };
-  return months[season] || "seasonal";
-}
-
-/**
- * Get crop-specific recommendations
- * @param {string} cropType
- * @returns {Array<string>}
- */
-function getCropRecommendations(cropType) {
-  const recommendations = {
-    wheat: [
-      "Water early morning or evening to reduce evaporation",
-      "Check soil moisture before each session",
-      "Apply nitrogen fertilizer during tillering stage",
-      "Monitor for rust disease during humid conditions"
-    ],
-    rice: [
-      "Maintain standing water during early growth stages",
-      "Apply phosphorus fertilizer at transplanting",
-      "Monitor for pest attacks during flowering",
-      "Ensure proper drainage during maturation"
-    ],
-    cotton: [
-      "Water regularly during boll formation",
-      "Apply potassium fertilizer for better fiber quality",
-      "Monitor for bollworm infestation",
-      "Avoid water stress during flowering"
-    ],
-    sugarcane: [
-      "Deep irrigation every 10-15 days",
-      "Apply nitrogen in splits throughout growth",
-      "Monitor for red rot disease",
-      "Ensure good drainage to prevent waterlogging"
-    ],
-    maize: [
-      "Water during tasseling and silking stages",
-      "Apply zinc fertilizer if deficiency observed",
-      "Monitor for corn borer attacks",
-      "Avoid water stress during pollination"
-    ],
-    vegetables: [
-      "Frequent light irrigation to maintain soil moisture",
-      "Use mulch to reduce evaporation",
-      "Monitor for fungal diseases in humid conditions",
-      "Apply balanced NPK fertilizer regularly"
-    ],
-    fruits: [
-      "Deep watering less frequently for root development",
-      "Avoid overhead watering to prevent fungal diseases",
-      "Apply organic matter for better fruit quality",
-      "Monitor soil pH regularly"
-    ]
-  };
-
-  return recommendations[cropType] || [
-    "Water early morning or evening to reduce evaporation",
-    "Check soil moisture before each session",
-    "Monitor for pests and diseases regularly",
-    "Apply appropriate fertilizers based on soil test"
-  ];
-}
-
-module.exports = {
-  validateCropSuitability,
-  getCurrentSeason,
-  getCropRecommendations
 };

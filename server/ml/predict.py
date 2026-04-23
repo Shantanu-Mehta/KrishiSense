@@ -7,6 +7,9 @@ from pathlib import Path
 # Get the directory where this script is located
 script_dir = Path(__file__).parent.absolute() 
 
+# Get input data from command line arguments
+input_data = json.loads(sys.argv[1])
+
 try:
     # Load pre-trained models
     with open(script_dir / 'clf_model.pkl', 'rb') as f:
@@ -20,9 +23,6 @@ try:
     
     with open(script_dir / 'features.pkl', 'rb') as f:
         feature_scaler = pickle.load(f)
-    
-    # Get input data from command line arguments
-    input_data = json.loads(sys.argv[1])
     
     # Check if this is ESP32 sensor data or crop data
     if 'device_id' in input_data:

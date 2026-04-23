@@ -28,9 +28,6 @@ export default function Sidebar() {
         <li className={isActive("/history") ? "active" : ""}>
           <Link to="/history">📋 History</Link>
         </li>
-        <li className={isActive("/analytics") ? "active" : ""}>
-          <Link to="/analytics">📈 Analytics</Link>
-        </li>
         <li className={isActive("/alerts") ? "active" : ""}>
           <Link to="/alerts">🔔 Alerts</Link>
         </li>
