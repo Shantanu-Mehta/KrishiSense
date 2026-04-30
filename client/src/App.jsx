@@ -14,7 +14,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/add-field" element={<AddCrop />} />
-        <Route path="/schedules" element={<IrrigationSchedule />} />
+        <Route path="/schedules/:planId?" element={<IrrigationSchedule />} />
         <Route path="/history" element={<PreviousReport />} />
         <Route path="/device-status" element={<DeviceStatus />} />
         <Route path="/alerts" element={<Alerts />} />

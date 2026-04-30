@@ -98,6 +98,8 @@ function validateAndPlan(input) {
     moisture: { passed: false, note: "" },
     location: { passed: false, note: "" }
   };
+  
+  const suggestions = [];
 
   // ── Unknown crop guard ────────────────────────────────────────
   if (!cropDB[crop]) {
@@ -233,29 +235,16 @@ function validateAndPlan(input) {
     };
   } else if (soilMoisture > 85) {
     checks.moisture = {
-      passed: false,
+      passed: true,
       note: `Soil moisture ${soilMoisture}% — already saturated`
     };
-    return {
-      passed: false,
-      failedAt: "moisture",
-      reason: `Soil moisture is ${soilMoisture}% — soil is already saturated. `
-             + `Irrigation is not needed right now.`,
-      suggestion: "Wait until soil moisture drops below 85% before irrigating. Check again in 24 hours.",
-      checks
-    };
+    suggestions.push(`Soil moisture is ${soilMoisture}% — soil is already saturated. Irrigation is not needed right now. Wait until soil moisture drops below 85% before irrigating. Check again in 24 hours.`);
   } else if (soilMoisture < 5) {
     checks.moisture = {
-      passed: false,
-      note: `Soil moisture ${soilMoisture}% — sensor may be offline or critically dry`
+      passed: true,
+      note: `Soil moisture ${soilMoisture}% — critically dry`
     };
-    return {
-      passed: false,
-      failedAt: "moisture",
-      reason: `Soil moisture reading is ${soilMoisture}% — this is critically low or the sensor may be disconnected.`,
-      suggestion: "Check ESP32 sensor connection. If soil is genuinely this dry, irrigate immediately.",
-      checks
-    };
+    suggestions.push(`Soil moisture reading is ${soilMoisture}% — this is critically low or the sensor may be disconnected. Check ESP32 sensor connection. If soil is genuinely this dry, irrigate immediately.`);
   } else {
     checks.moisture = {
       passed: true,
@@ -265,7 +254,30 @@ function validateAndPlan(input) {
 
 
   // ════════════════════════════════════════════════════════════
-  //  VALIDATION STEP 4 — LOCATION (lightweight water stress check)
+  //  VALIDATION STEP 4 — OTHER SENSORS (Humidity, Temp, pH)
+  // ════════════════════════════════════════════════════════════
+  
+  const ph = input.ph ?? null;
+  const temp = input.temperature ?? null;
+  const hum = input.humidity ?? null;
+  
+  if (ph !== null) {
+    if (ph < 5.5) suggestions.push(`pH level is ${ph} (Acidic). Consider adding agricultural lime to raise pH for optimal crop growth.`);
+    else if (ph > 7.5) suggestions.push(`pH level is ${ph} (Alkaline). Consider adding elemental sulfur or organic compost to lower pH.`);
+  }
+  
+  if (temp !== null) {
+    if (temp > 35) suggestions.push(`Temperature is very high (${temp}°C). Ensure adequate irrigation to prevent heat stress.`);
+    else if (temp < 10) suggestions.push(`Temperature is quite low (${temp}°C). Growth may be slower. Frost protection may be needed.`);
+  }
+  
+  if (hum !== null) {
+    if (hum > 85) suggestions.push(`High humidity (${hum}%). Watch out for fungal diseases; avoid overhead watering.`);
+    else if (hum < 30) suggestions.push(`Low humidity (${hum}%). Evaporation rates will be higher; irrigation might be needed more frequently.`);
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  VALIDATION STEP 5 — LOCATION (lightweight water stress check)
   // ════════════════════════════════════════════════════════════
 
   // High water-demand crops in water-scarce states
@@ -301,12 +313,15 @@ function validateAndPlan(input) {
   return {
     passed: true,
     checks,
+    suggestions,
     mlInput: {
       crop,
       soilType:     soil,
       season,
       soilMoisture: soilMoisture,
       humidity:     input.humidity     ?? null,
+      temperature:  input.temperature  ?? null,
+      ph:           input.ph           ?? null,
       waterLevel:   input.waterLevel   ?? null,
       fieldArea:    input.fieldArea    ?? null,
       location:     `${input.city}, ${input.state}`

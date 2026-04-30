@@ -1,20 +1,32 @@
-import React from "react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
-import './PreviousReport.css';
+import "./Home.css";
+
+const images = import.meta.glob('../assets/*.{jpg,jpeg,png,svg}', { eager: true, import: 'default' });
+
+const getImageUrl = (cropName) => {
+  if (!cropName) return null;
+  const key = Object.keys(images).find(k => k.toLowerCase().includes(`/${cropName.toLowerCase()}.`));
+  return key ? images[key] : null;
+};
 
 function PreviousReport() {
+  const navigate = useNavigate();
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchIssues = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/data/forms?status=false");
-      setIssues(res.data);
+      const res = await axios.get("http://localhost:5000/api/data/plans");
+      // Filter for inactive plans (where should_irrigate is false)
+      const inactivePlans = (Array.isArray(res.data) ? res.data : []).filter(plan => !plan.status);
+      setIssues(inactivePlans);
     } catch (error) {
-      console.error("Error fetching history:", error);
+      console.error("Error fetching irrigation plans:", error);
+      setIssues([]);
     } finally {
       setLoading(false);
     }
@@ -24,148 +36,100 @@ function PreviousReport() {
     fetchIssues();
   }, []);
 
+  const formatDate = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
+  };
+
+  const formatValue = (value, suffix = "") => {
+    if (value === null || value === undefined || value === "") return "-";
+    return `${value}${suffix}`;
+  };
+
   return (
     <Layout>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
-        <div style={{ marginBottom: '40px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#f3f4f6', margin: '0 0 8px 0' }}>
-            Irrigation History
-          </h1>
-          <p style={{ color: '#9ca3af', fontSize: '14px', margin: 0 }}>
-            View completed and inactive irrigation zones.
-          </p>
+      <div className="home-container">
+        <div className="home-header">
+          <div>
+            <h1>Irrigation History</h1>
+            <p>Completed and inactive irrigation zones</p>
+          </div>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ color: '#9ca3af', fontSize: '16px' }}>Loading...</div>
+          <div className="home-empty">
+            <div className="home-empty-icon">⏳</div>
+            <div>Loading history...</div>
           </div>
         ) : issues.length === 0 ? (
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '60px 20px',
-              background: '#1f2937',
-              border: '1px solid #374151',
-              borderRadius: '12px',
-            }}
-          >
-            <div style={{ color: '#9ca3af', fontSize: '18px', fontWeight: '500' }}>
-              📋 No irrigation history found!
-            </div>
-            <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '8px' }}>
-              Completed fields will appear here.
-            </p>
+          <div className="home-empty">
+            <div className="home-empty-icon">📁</div>
+            <div>No inactive zones found</div>
+            <p>All your fields currently require irrigation.</p>
           </div>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-              gap: '20px',
-            }}
-          >
-            {issues.map((issue, idx) => (
-              <div
-                key={idx}
-                style={{
-                  position: 'relative',
-                  background: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#10b981';
-                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(16, 185, 129, 0.15)';
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#374151';
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                {/* Image Section */}
-                {issue.photo?.data && (
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '200px',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      background: '#111827',
-                    }}
-                  >
-                    <img
-                      src={`http://localhost:5000/api/data/forms/image/${issue._id}`}
-                      alt={issue.title}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        display: 'block',
-                        transition: 'transform 0.4s ease',
-                      }}
-                      draggable={false}
-                      onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-                      onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                    />
-                  </div>
-                )}
+          <div className="home-grid">
+            {issues.map((issue, idx) => {
+              const statusLabel = "Completed";
+              const pumpLabel = "Offline";
+              const imageUrl = getImageUrl(issue.crop_type);
 
-                {/* Content Section */}
-                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                  <h3
-                    style={{
-                      fontWeight: '700',
-                      fontSize: '18px',
-                      color: '#f3f4f6',
-                      margin: '0 0 12px 0',
-                      lineHeight: '1.3',
-                    }}
-                  >
-                    {issue.title}
-                  </h3>
-
-                  <p
-                    style={{
-                      color: '#d1d5db',
-                      fontSize: '14px',
-                      lineHeight: '1.6',
-                      margin: '0 0 12px 0',
-                      flex: 1,
-                    }}
-                  >
-                    {issue.description}
-                  </p>
-
-                  {/* Status Badge */}
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      background: issue.status ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                      color: issue.status ? '#10b981' : '#ef4444',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      width: 'fit-content',
-                      border: `1px solid ${issue.status ? '#10b981' : '#ef4444'}`,
-                    }}
-                  >
-                    <span style={{ marginRight: '6px' }}>
-                      {issue.status ? '✓' : '●'}
+              return (
+                <article key={issue._id || idx} className="home-card">
+                  <div className="home-card-header">
+                    <div>
+                      <h2>{issue.crop_type ? issue.crop_type : "Crop"}</h2>
+                      <p>{issue.region ? issue.region : "Unknown region"}</p>
+                    </div>
+                    <span className="home-pill home-pill-inactive">
+                      {statusLabel}
                     </span>
-                    {issue.status ? 'Active' : 'Completed'}
                   </div>
-                </div>
-              </div>
-            ))}
+
+                  <div className="home-card-image">
+                    {imageUrl ? (
+                      <img src={imageUrl} alt={issue.crop_type || "field"} />
+                    ) : (
+                      <div className="home-card-image-fallback">
+                        <span className="fallback-icon">🌿</span>
+                        <span>{issue.crop_type || "Field"}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="home-card-grid">
+                    <div>
+                      <div className="home-label">Farm ID</div>
+                      <div className="home-value">{formatValue(issue.farm_id)}</div>
+                    </div>
+                    <div>
+                      <div className="home-label">Soil type</div>
+                      <div className="home-value">{issue.soil_type ? issue.soil_type : "-"}</div>
+                    </div>
+                    <div>
+                      <div className="home-label">Sowing date</div>
+                      <div className="home-value">{formatDate(issue.sowing_date)}</div>
+                    </div>
+                  </div>
+
+                  <div className="home-card-footer">
+                    <div className="home-mini-card">
+                      <div className="home-mini-title">Pump status</div>
+                      <div className="home-mini-value">{pumpLabel}</div>
+                    </div>
+                    <div className="home-mini-card">
+                      <div className="home-mini-title">Added</div>
+                      <div className="home-mini-value">{formatDate(issue.createdAt)}</div>
+                    </div>
+                  </div>
+
+                  <button className="home-button" onClick={() => navigate(`/schedules/${issue.farm_id}`)}>
+                    View schedule
+                  </button>
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

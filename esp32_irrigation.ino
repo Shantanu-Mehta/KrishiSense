@@ -8,7 +8,7 @@ const char* ssid = "YOUR_WIFI_SSID";
 const char* password = "YOUR_WIFI_PASSWORD";
 
 // Server details
-const char* serverIP = "192.168.1.100";  // CHANGE TO YOUR SERVER IP
+const char* serverIP = "10.178.54.222";  // CHANGED TO YOUR SERVER IP
 const int serverPort = 5000;
 const String serverURL = "http://" + String(serverIP) + ":" + String(serverPort) + "/api/esp32";
 

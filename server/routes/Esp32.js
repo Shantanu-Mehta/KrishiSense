@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const SensorDataRaw = require("../models/sensor_data_raw");
 const IrrigationDetails = require("../models/irrigation_details");
+const { runMLPrediction } = require("../services/mlService");
 
 // ─────────────────────────────────────────
 // POST /api/esp32/data
@@ -152,6 +153,9 @@ router.get("/latest/:device_id", async (req, res) => {
       return res.json({});
     }
 
+    // Get current water need from ML
+    const mlResult = await runMLPrediction(latest.toObject());
+
     res.json({
       device_id: latest.device_id,
       temperature: latest.temperature,
@@ -161,7 +165,9 @@ router.get("/latest/:device_id", async (req, res) => {
       water_level: latest.water_level,
       rainfall: latest.rainfall,
       crop_type: latest.crop_type,
-      timestamp: latest.timestamp
+      timestamp: latest.timestamp,
+      water_need: mlResult.water_amount,
+      should_irrigate: mlResult.should_irrigate
     });
   } catch (err) {
     console.error("Latest data error:", err);
@@ -205,6 +211,9 @@ router.post("/trigger/:device_id", async (req, res) => {
       return res.status(404).json({ error: "No sensor data found for this device" });
     }
 
+    // Get current water need from ML
+    const mlResult = await runMLPrediction(latestDoc.toObject());
+
     // Return latest MongoDB reading immediately
     res.json({
       success: true,
@@ -217,7 +226,9 @@ router.post("/trigger/:device_id", async (req, res) => {
         water_level: latestDoc.water_level,
         rainfall: latestDoc.rainfall,
         crop_type: latestDoc.crop_type,
-        timestamp: latestDoc.timestamp
+        timestamp: latestDoc.timestamp,
+        water_need: mlResult.water_amount,
+        should_irrigate: mlResult.should_irrigate
       }
     });
 

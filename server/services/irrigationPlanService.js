@@ -21,10 +21,10 @@ function buildIrrigationPlan(mergedData, mlResult, validationResult) {
   } = mergedData;
 
   // Generate 7-day irrigation schedule
-  const schedule = generateIrrigationSchedule(mlResult, sowingDate);
+  const schedule = generateIrrigationSchedule(mlResult, sowingDate, fieldArea);
 
   // Generate crop-specific recommendations
-  const recommendations = generateRecommendations(crop, soilType, mlResult, validationResult);
+  const recommendations = generateRecommendations(crop, soilType, mlResult, validationResult, fieldArea);
 
   return {
     schedule,
@@ -34,46 +34,75 @@ function buildIrrigationPlan(mergedData, mlResult, validationResult) {
 
 /**
  * Generate 7-day irrigation schedule based on ML prediction
- * @param {Object} mlResult - ML prediction result
+ * @param {Object} mlResult - ML prediction result containing full schedule
  * @param {string} sowingDate - Sowing date
+ * @param {number} fieldArea - Field area in acres
  * @returns {Array} - 7-day schedule
  */
-function generateIrrigationSchedule(mlResult, sowingDate) {
+function generateIrrigationSchedule(mlResult, sowingDate, fieldArea) {
   const schedule = [];
-  const startDate = new Date(sowingDate);
+  const startDate = new Date(sowingDate || new Date());
 
+  // Use the mlResult.schedule array if available, otherwise fallback to replicating day 1
   for (let day = 1; day <= 7; day++) {
     const currentDate = new Date(startDate);
     currentDate.setDate(startDate.getDate() + day - 1);
+    
+    // Find matching day in mlResult schedule, or fallback to general mlResult
+    const dayPrediction = (mlResult.schedule && mlResult.schedule[day - 1]) 
+      ? mlResult.schedule[day - 1] 
+      : { should_irrigate: mlResult.should_irrigate, water_amount: mlResult.water_amount };
+
+    // 1 mm over 1 acre = 4046.86 Liters
+    const totalWaterAmount = dayPrediction.water_amount * fieldArea * 4046.86;
 
     const daySchedule = {
       day: day,
       date: currentDate.toISOString().split('T')[0],
-      should_irrigate: mlResult.should_irrigate,
-      water_amount: mlResult.water_amount,
+      should_irrigate: dayPrediction.should_irrigate,
+      water_amount: totalWaterAmount,
+      simulated_moisture: dayPrediction.simulated_moisture || null,
       sessions: []
     };
 
     // If irrigation is needed, create sessions
-    if (mlResult.should_irrigate) {
+    if (dayPrediction.should_irrigate && totalWaterAmount > 0) {
       // Determine number of sessions based on water amount
       let sessionsCount;
-      if (mlResult.water_amount <= 10) {
+      if (totalWaterAmount <= 10) {
         sessionsCount = 1;
-      } else if (mlResult.water_amount <= 20) {
+      } else if (totalWaterAmount <= 20) {
         sessionsCount = 2;
       } else {
         sessionsCount = 3;
       }
 
       const sessionTimes = getSessionTimes(sessionsCount);
-      const waterPerSession = Math.ceil(mlResult.water_amount / sessionsCount);
+      const waterPerSession = Math.ceil(totalWaterAmount / sessionsCount);
+      
+      // Typical 5V mini submersible pump (0.5cm nozzle) rate is ~2 Liters per minute
+      const PUMP_CAPACITY_LPM = 2.0;
 
       sessionTimes.forEach((time, index) => {
+        // Calculate duration in minutes
+        const durationMinutes = Math.ceil(waterPerSession / PUMP_CAPACITY_LPM);
+        
+        // Calculate end time
+        const [hours, minutes] = time.split(':').map(Number);
+        const startTimeObj = new Date();
+        startTimeObj.setHours(hours, minutes, 0, 0);
+        startTimeObj.setMinutes(startTimeObj.getMinutes() + durationMinutes);
+        
+        const endHours = String(startTimeObj.getHours()).padStart(2, '0');
+        const endMinutes = String(startTimeObj.getMinutes()).padStart(2, '0');
+        const endTime = `${endHours}:${endMinutes}`;
+
         daySchedule.sessions.push({
           session_number: index + 1,
           time: time,
-          duration_minutes: waterPerSession
+          end_time: endTime,
+          duration_minutes: durationMinutes,
+          water_amount_liters: waterPerSession
         });
       });
     }
@@ -90,14 +119,16 @@ function generateIrrigationSchedule(mlResult, sowingDate) {
  * @param {string} soilType - Soil type
  * @param {Object} mlResult - ML prediction result
  * @param {Object} validationResult - Validation result
+ * @param {number} fieldArea - Field area in acres
  * @returns {Array<string>} - Recommendations array
  */
-function generateRecommendations(crop, soilType, mlResult, validationResult) {
+function generateRecommendations(crop, soilType, mlResult, validationResult, fieldArea) {
   const recommendations = [];
 
   // Basic irrigation recommendations
   if (mlResult.should_irrigate) {
-    recommendations.push(`Irrigate with ${mlResult.water_amount} liters per day for optimal ${crop} growth`);
+    const totalWater = mlResult.water_amount * fieldArea;
+    recommendations.push(`Irrigate with ${totalWater.toFixed(1)} liters per day for optimal ${crop} growth`);
     recommendations.push("Water early morning (6 AM) or evening (6 PM) to reduce evaporation");
   } else {
     recommendations.push("No irrigation needed currently - soil moisture is adequate");

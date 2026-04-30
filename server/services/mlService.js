@@ -104,24 +104,25 @@ const runMLPrediction = async (inputData) => {
           const result = JSON.parse(output.trim());
           resolve({
             should_irrigate: result.should_irrigate || false,
-            water_amount: result.water_amount || 0
+            water_amount: result.water_amount || 0,
+            schedule: result.schedule || []
           });
         } catch (e) {
           console.error('Failed to parse ML output:', output, 'Error:', error);
           // Provide fallback values when ML fails
-          resolve({ should_irrigate: false, water_amount: 0 });
+          resolve({ should_irrigate: false, water_amount: 0, schedule: [] });
         }
       });
 
       // Handle process errors
       pythonProcess.on('error', (err) => {
         console.error('Failed to spawn Python process:', err.message);
-        resolve({ should_irrigate: false, water_amount: 0 });
+        resolve({ should_irrigate: false, water_amount: 0, schedule: [] });
       });
 
     } catch (error) {
       console.error('Error in runMLPrediction:', error);
-      resolve({ should_irrigate: false, water_amount: 0 });
+      resolve({ should_irrigate: false, water_amount: 0, schedule: [] });
     }
   });
 };

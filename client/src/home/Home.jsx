@@ -4,6 +4,14 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import "./Home.css";
 
+const images = import.meta.glob('../assets/*.{jpg,jpeg,png,svg}', { eager: true, import: 'default' });
+
+const getImageUrl = (cropName) => {
+  if (!cropName) return null;
+  const key = Object.keys(images).find(k => k.toLowerCase().includes(`/${cropName.toLowerCase()}.`));
+  return key ? images[key] : null;
+};
+
 function Home() {
   const navigate = useNavigate();
   const [issues, setIssues] = useState([]);
@@ -13,9 +21,10 @@ function Home() {
     try {
       setLoading(true);
       const res = await axios.get("http://localhost:5000/api/data/plans");
-      setIssues(res.data);
+      setIssues(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error("Error fetching irrigation plans:", error);
+      setIssues([]);
     } finally {
       setLoading(false);
     }
@@ -25,186 +34,103 @@ function Home() {
     fetchIssues();
   }, []);
 
+  const formatDate = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
+  };
+
+  const formatValue = (value, suffix = "") => {
+    if (value === null || value === undefined || value === "") return "-";
+    return `${value}${suffix}`;
+  };
+
   return (
     <Layout>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
-        {/* Page Header */}
-        <div className="page-header">
-          <h1 className="page-title">🌾 Dashboard</h1>
-          <p className="page-subtitle">
-            Real-time monitoring of active irrigation zones
-          </p>
+      <div className="home-container">
+        <div className="home-header">
+          <div>
+            <h1>Dashboard</h1>
+            <p>Live irrigation zones and sensor summary</p>
+          </div>
         </div>
 
-        {/* Content */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <div style={{ color: '#9ca3af', fontSize: '16px' }}>Loading zones...</div>
+          <div className="home-empty">
+            <div className="home-empty-icon">⏳</div>
+            <div>Loading zones...</div>
           </div>
         ) : issues.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">📭</div>
-            <div className="empty-state-text">No active irrigation zones</div>
-            <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '8px' }}>
-              Get started by adding a new irrigation field.
-            </p>
+          <div className="home-empty">
+            <div className="home-empty-icon">🌱</div>
+            <div>No active irrigation zones</div>
+            <p>Add a new field to start monitoring.</p>
           </div>
         ) : (
-          <div className="cards">
+          <div className="home-grid">
             {issues.map((issue, idx) => {
-              const formatDate = (d) => {
-                if (!d) return '—';
-                try {
-                  return new Date(d).toLocaleDateString();
-                } catch {
-                  return d;
-                }
-              };
+              const statusLabel = issue.status ? "Active" : "Inactive";
+              const pumpLabel = issue.pump_status === "running"
+                ? "Running"
+                : issue.pump_status === "idle"
+                ? "Idle"
+                : "Offline";
+
+              const imageUrl = getImageUrl(issue.crop_type);
 
               return (
-                <div key={issue._id || idx} className="card-item">
-                  <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
-                    
-                    {issue.photo?.data ? (
-                      <div style={{ width: 220, height: 140, overflow: 'hidden', borderRadius: 8 }}>
-                        <img
-                          src={`http://localhost:5000/api/data/forms/image/${issue._id}`}
-                          alt={issue.crop_type || 'crop'}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      </div>
+                <article key={issue._id || idx} className="home-card">
+                  <div className="home-card-header">
+                    <div>
+                      <h2>{issue.crop_type ? issue.crop_type : "Crop"}</h2>
+                      <p>{issue.region ? issue.region : "Unknown region"}</p>
+                    </div>
+                    <span className={`home-pill ${issue.status ? "home-pill-active" : "home-pill-inactive"}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+
+                  <div className="home-card-image">
+                    {imageUrl ? (
+                      <img src={imageUrl} alt={issue.crop_type || "field"} />
                     ) : (
-                      <div style={{ width: 220, height: 140, borderRadius: 8, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
-                        No Image
+                      <div className="home-card-image-fallback">
+                        <span className="fallback-icon">🌿</span>
+                        <span>{issue.crop_type || "Field"}</span>
                       </div>
                     )}
+                  </div>
 
-                   
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <h3 style={{ margin: 0, color: '#1b1b1b', fontSize: 22, fontWeight: 700 }}>
-                            {issue.crop_type ? issue.crop_type.toUpperCase() : 'Crop'}
-                          </h3>
-                          <div style={{ color: '#6b7280', fontSize: 13, marginTop: 4 }}>{issue.region || '—'}</div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 12, color: issue.status ? '#10b981' : '#f97316', fontWeight: 700 }}>
-                            {issue.status ? '🟢 Active' : '🔴 Inactive'}
-                          </div>
-                          <div style={{
-                            fontSize: 11,
-                            color: issue.pump_status === 'running' ? '#ef4444' :
-                                   issue.pump_status === 'idle' ? '#f59e0b' : '#6b7280',
-                            fontWeight: 600,
-                            marginTop: 2
-                          }}>
-                            Pump: {issue.pump_status === 'running' ? '🏃 Running' :
-                                   issue.pump_status === 'idle' ? '⏸️ Idle' : '🔌 Offline'}
-                          </div>
-                          <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>
-                            Added: {formatDate(issue.createdAt)}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Basic Info Grid */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginTop: 16, backgroundColor: '#0f172a', padding: 12, borderRadius: 8 }}>
-                        <div style={{ color: '#d1d5db', fontSize: 13 }}>
-                          <div style={{ color: '#9ca3af', fontSize: 11 }}>Farm ID</div>
-                          <div style={{ fontWeight: 600, marginTop: 2 }}>{issue.farm_id || '—'}</div>
-                        </div>
-                        <div style={{ color: '#d1d5db', fontSize: 13 }}>
-                          <div style={{ color: '#9ca3af', fontSize: 11 }}>Soil Type</div>
-                          <div style={{ fontWeight: 600, marginTop: 2 }}>{issue.soil_type ? issue.soil_type.toUpperCase() : '—'}</div>
-                        </div>
-                        <div style={{ color: '#d1d5db', fontSize: 13 }}>
-                          <div style={{ color: '#9ca3af', fontSize: 11 }}>Sowing Date</div>
-                          <div style={{ fontWeight: 600, marginTop: 2 }}>{formatDate(issue.sowing_date)}</div>
-                        </div>
-                        <div style={{ color: '#d1d5db', fontSize: 13 }}>
-                          <div style={{ color: '#9ca3af', fontSize: 11 }}>Expected Harvest</div>
-                          <div style={{ fontWeight: 600, marginTop: 2 }}>{formatDate(issue.harvest_date)}</div>
-                        </div>
-                      </div>
-
-                      {/* ML Predictions from database */}
-                      {issue.recommended_irrigation_mm || issue.mlPredictions ? (
-                        <div style={{ marginTop: 16, backgroundColor: '#064e3b', padding: 12, borderRadius: 8, border: '1px solid #10b981' }}>
-                          <div style={{ color: '#10b981', fontSize: 12, fontWeight: 600, marginBottom: 8 }}>📊 ML Predictions</div>
-                          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                            {issue.recommended_irrigation_mm ? (
-                              <div>
-                                <div style={{ color: '#9ca3af', fontSize: 11 }}>Recommended Irrigation</div>
-                                <div style={{ color: '#f3f4f6', fontWeight: 700, fontSize: 14, marginTop: 2 }}>
-                                  {issue.recommended_irrigation_mm} mm
-                                </div>
-                              </div>
-                            ) : null}
-                            {issue.mlPredictions?.optimal_irrigation_days ? (
-                              <div>
-                                <div style={{ color: '#9ca3af', fontSize: 11 }}>Irrigation Frequency</div>
-                                <div style={{ color: '#f3f4f6', fontWeight: 700, fontSize: 14, marginTop: 2 }}>
-                                  Every {issue.mlPredictions.optimal_irrigation_days} days
-                                </div>
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ marginTop: 16, color: '#9ca3af', fontSize: 12 }}>
-                          ⏳ Predictions pending...
-                        </div>
-                      )}
-
-                      {issue.sensor_data && (
-                        <div style={{ marginTop: 16, backgroundColor: '#1e293b', padding: 12, borderRadius: 8, border: '1px solid #334155' }}>
-                          <div style={{ color: '#60a5fa', fontSize: 12, fontWeight: 600, marginBottom: 8 }}>🌡️ Live Sensor Data</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-                            <div style={{ color: '#cbd5e1', fontSize: 11 }}>
-                              <div style={{ color: '#94a3b8', fontSize: 10 }}>Temperature</div>
-                              <div style={{ fontWeight: 600 }}>{issue.sensor_data.temperature}°C</div>
-                            </div>
-                            <div style={{ color: '#cbd5e1', fontSize: 11 }}>
-                              <div style={{ color: '#94a3b8', fontSize: 10 }}>Humidity</div>
-                              <div style={{ fontWeight: 600 }}>{issue.sensor_data.humidity}%</div>
-                            </div>
-                            <div style={{ color: '#cbd5e1', fontSize: 11 }}>
-                              <div style={{ color: '#94a3b8', fontSize: 10 }}>Soil Moisture</div>
-                              <div style={{ fontWeight: 600 }}>{issue.sensor_data.soil_moisture}%</div>
-                            </div>
-                            <div style={{ color: '#cbd5e1', fontSize: 11 }}>
-                              <div style={{ color: '#94a3b8', fontSize: 10 }}>Water Level</div>
-                              <div style={{ fontWeight: 600 }}>{issue.sensor_data.water_level}%</div>
-                            </div>
-                          </div>
-                          <div style={{ color: '#64748b', fontSize: 10, marginTop: 8 }}>
-                            Last update: {new Date(issue.sensor_data.last_update).toLocaleTimeString()}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Action Buttons */}
-                      <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-                        <button
-                          onClick={() => navigate('/schedules')}
-                          style={{
-                            backgroundColor: '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: 6,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          📅 View Schedule
-                        </button>
-                      </div>
+                  <div className="home-card-grid">
+                    <div>
+                      <div className="home-label">Farm ID</div>
+                      <div className="home-value">{formatValue(issue.farm_id)}</div>
+                    </div>
+                    <div>
+                      <div className="home-label">Soil type</div>
+                      <div className="home-value">{issue.soil_type ? issue.soil_type : "-"}</div>
+                    </div>
+                    <div>
+                      <div className="home-label">Sowing date</div>
+                      <div className="home-value">{formatDate(issue.sowing_date)}</div>
                     </div>
                   </div>
-                </div>
+
+                  <div className="home-card-footer">
+                    <div className="home-mini-card">
+                      <div className="home-mini-title">Pump status</div>
+                      <div className="home-mini-value">{pumpLabel}</div>
+                    </div>
+                    <div className="home-mini-card">
+                      <div className="home-mini-title">Added</div>
+                      <div className="home-mini-value">{formatDate(issue.createdAt)}</div>
+                    </div>
+                  </div>
+
+                  <button className="home-button" onClick={() => navigate(`/schedules/${issue.farm_id}`)}>
+                    View schedule
+                  </button>
+                </article>
               );
             })}
           </div>

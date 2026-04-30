@@ -18,7 +18,9 @@ const IrrigationPlanSchema = new mongoose.Schema({
     sessions: [{
       session_number: { type: Number, required: true },
       time: { type: String, required: true },
-      duration_minutes: { type: Number, required: true }
+      end_time: { type: String, required: true },
+      duration_minutes: { type: Number, required: true },
+      water_amount_liters: { type: Number }
     }]
   }],
   recommendations: [{ type: String }],

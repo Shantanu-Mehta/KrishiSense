@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { validateAndPlan } = require('../services/cropValidationService');
+const { validateAndPlan } = require('../validateAndPlan_v2');
 const { runMLPrediction } = require('../services/mlService');
 const { buildIrrigationPlan } = require('../services/irrigationPlanService');
 const IrrigationPlan = require('../models/IrrigationPlan');
@@ -31,21 +31,26 @@ router.post('/plan', async (req, res) => {
       .sort({ timestamp: -1 })
       .limit(1);
 
-    if (!latestSensorData) {
-      return res.status(400).json({
-        success: false,
-        error: 'No sensor data available. Please ensure ESP32 device is connected and sending data.'
-      });
-    }
+    // If no sensor data is available, default to mock data instead of throwing error
+    const sensorData = latestSensorData || {
+      soil_moisture: 50,
+      humidity: 60,
+      water_level: 70,
+      temperature: 25,
+      ph: 6.5,
+      timestamp: new Date()
+    };
 
     // Merge sensor data with user input
     const mergedData = {
       crop,
       soilType,
       sowingDate,
-      soilMoisture: latestSensorData.soil_moisture,
-      humidity: latestSensorData.humidity,
-      waterLevel: latestSensorData.water_level,
+      soilMoisture: sensorData.soil_moisture,
+      humidity: sensorData.humidity,
+      waterLevel: sensorData.water_level,
+      temperature: sensorData.temperature,
+      ph: sensorData.ph,
       fieldArea,
       city,
       state
@@ -57,7 +62,8 @@ router.post('/plan', async (req, res) => {
     if (!validationResult.passed) {
       return res.status(400).json({
         success: false,
-        error: 'Validation failed',
+        error: validationResult.reason || 'Validation failed',
+        suggestion: validationResult.suggestion,
         validation: validationResult
       });
     }
@@ -79,15 +85,15 @@ router.post('/plan', async (req, res) => {
       season: validationResult.checks.season.note.includes('Kharif') ? 'Kharif' :
               validationResult.checks.season.note.includes('Rabi') ? 'Rabi' : 'Zaid',
       should_irrigate: mlResult.should_irrigate,
-      water_amount_per_session: mlResult.water_amount,
+      water_amount_per_session: Math.ceil(mlResult.water_amount * parseFloat(fieldArea) * 4046.86),
       schedule: irrigationPlan.schedule,
       recommendations: irrigationPlan.recommendations,
       sensor_data: {
-        temperature: latestSensorData.temperature,
-        humidity: latestSensorData.humidity,
-        soil_moisture: latestSensorData.soil_moisture,
-        water_level: latestSensorData.water_level,
-        timestamp: latestSensorData.timestamp
+        temperature: sensorData.temperature,
+        humidity: sensorData.humidity,
+        soil_moisture: sensorData.soil_moisture,
+        water_level: sensorData.water_level,
+        timestamp: sensorData.timestamp
       },
       created_at: new Date()
     });
@@ -98,6 +104,7 @@ router.post('/plan', async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Irrigation plan created successfully',
+      suggestions: validationResult.suggestions || [],
       plan: {
         plan_id: savedPlan.plan_id,
         crop: savedPlan.crop,
