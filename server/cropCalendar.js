@@ -1,7 +1,7 @@
 const cropCalendar = {
   Rice: {
     growthDays: 120,
-    waterRequirement: 1200, // mm
+    waterRequirement: 1200, 
     soilTypes: ['loamy', 'alluvial', 'clayey'],
     minTemp: 20,
     maxTemp: 35,

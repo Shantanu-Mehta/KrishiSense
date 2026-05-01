@@ -151,7 +151,6 @@ function DeviceStatus() {
 
         <div className="sensor-grid">
           {[
-            { label: "Water Need", value: formatSensorValue(esp32Data?.water_need, 1, " L/m²"), icon: "🚰", status: { status: esp32Data?.should_irrigate ? "Needs Water" : "Optimal", variant: esp32Data?.should_irrigate ? "warning" : "online" } },
             { label: "Temperature", value: formatSensorValue(sensorData.temperature, 1, "°C"), icon: "🌡️", status: getSensorStatus("temperature", sensorData.temperature) },
             { label: "Humidity", value: formatSensorValue(sensorData.humidity, 1, "%"), icon: "💧", status: getSensorStatus("humidity", sensorData.humidity) },
             { label: "Soil Moisture", value: formatSensorValue(sensorData.soil_moisture, 1, "%"), icon: "🌱", status: getSensorStatus("soil_moisture", sensorData.soil_moisture) },

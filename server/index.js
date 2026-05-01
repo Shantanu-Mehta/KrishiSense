@@ -5,14 +5,14 @@ const dotenv = require('dotenv');
 dotenv.config();
 const app = express();
 const PORT = 5000;
-// Middleware
+
 app.use(cors({
   origin: 'http://localhost:5173', 
   credentials: true                
 }));
 app.use(express.json());
 
-// Routes
+
 app.use('/api/data', require('./routes/Database'));
 app.use('/api/esp32', require('./routes/Esp32'));
 app.use('/api/irrigation', require('./routes/IrrigationPlan'));

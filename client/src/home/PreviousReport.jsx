@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import "./Home.css";
 
-const images = import.meta.glob('../assets/*.{jpg,jpeg,png,svg}', { eager: true, import: 'default' });
+const images = import.meta.glob('../assets/*.png', { eager: true, import: 'default' });
 
 const getImageUrl = (cropName) => {
   if (!cropName) return null;
@@ -21,7 +21,7 @@ function PreviousReport() {
     try {
       setLoading(true);
       const res = await axios.get("http://localhost:5000/api/data/plans");
-      // Filter for inactive plans (where should_irrigate is false)
+      
       const inactivePlans = (Array.isArray(res.data) ? res.data : []).filter(plan => !plan.status);
       setIssues(inactivePlans);
     } catch (error) {

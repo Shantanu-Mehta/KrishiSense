@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { dashboardData } from "../components/DashBoardData";
 import "./Navbar.css";
 
 export default function Navbar() {
@@ -10,9 +9,6 @@ export default function Navbar() {
       <div className="navbar-right">
         <Link to="/alerts" className="alert-bell">
           <span className="bell-icon">🔔</span>
-          {dashboardData.alerts.length > 0 && (
-            <span className="alert-badge">{dashboardData.alerts.length}</span>
-          )}
         </Link>
         <div className="status">
           <div className="dot"></div>

@@ -69,7 +69,7 @@ function Alerts() {
         id: id++,
         type: "warning",
         title: "High Temperature",
-        message: `Temperature is high at ${sensorData.temperature}°C.`,
+        message: `Temperature is high at ${sensorData.temperature}ï¿½C.`,
         timestamp: new Date().toLocaleString()
       });
     }

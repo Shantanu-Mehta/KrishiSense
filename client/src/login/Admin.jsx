@@ -51,10 +51,10 @@ const handlesSubmit = async (e) => {
         style={{ background: '#fff',  padding: '32px', borderRadius: '18px',  minWidth: '420px',
            
         }}>
-          {/* heading */}
+          
           <h1 style={{color: '#313d5a', fontWeight: 700, letterSpacing: '1px'}}>Admin </h1>
 
-          {/* form */}
+          
             <form onSubmit={handlesSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '19px' }}>
 
                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

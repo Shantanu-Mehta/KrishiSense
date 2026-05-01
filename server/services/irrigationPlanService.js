@@ -1,15 +1,6 @@
-/**
- * Irrigation Plan Service
- * Builds detailed irrigation plans from ML predictions
- */
 
-/**
- * Build irrigation plan from merged data, ML result, and validation result
- * @param {Object} mergedData - Merged user input and sensor data
- * @param {Object} mlResult - ML model result {should_irrigate, water_amount}
- * @param {Object} validationResult - Validation checks result
- * @returns {Object} - Complete irrigation plan with schedule and recommendations
- */
+
+
 function buildIrrigationPlan(mergedData, mlResult, validationResult) {
   const {
     crop,
@@ -20,10 +11,10 @@ function buildIrrigationPlan(mergedData, mlResult, validationResult) {
     state
   } = mergedData;
 
-  // Generate 7-day irrigation schedule
+  
   const schedule = generateIrrigationSchedule(mlResult, sowingDate, fieldArea);
 
-  // Generate crop-specific recommendations
+  
   const recommendations = generateRecommendations(crop, soilType, mlResult, validationResult, fieldArea);
 
   return {
@@ -32,28 +23,22 @@ function buildIrrigationPlan(mergedData, mlResult, validationResult) {
   };
 }
 
-/**
- * Generate 7-day irrigation schedule based on ML prediction
- * @param {Object} mlResult - ML prediction result containing full schedule
- * @param {string} sowingDate - Sowing date
- * @param {number} fieldArea - Field area in acres
- * @returns {Array} - 7-day schedule
- */
+
 function generateIrrigationSchedule(mlResult, sowingDate, fieldArea) {
   const schedule = [];
   const startDate = new Date(sowingDate || new Date());
 
-  // Use the mlResult.schedule array if available, otherwise fallback to replicating day 1
+  
   for (let day = 1; day <= 7; day++) {
     const currentDate = new Date(startDate);
     currentDate.setDate(startDate.getDate() + day - 1);
     
-    // Find matching day in mlResult schedule, or fallback to general mlResult
+    
     const dayPrediction = (mlResult.schedule && mlResult.schedule[day - 1]) 
       ? mlResult.schedule[day - 1] 
       : { should_irrigate: mlResult.should_irrigate, water_amount: mlResult.water_amount };
 
-    // 1 mm over 1 acre = 4046.86 Liters
+    
     const totalWaterAmount = dayPrediction.water_amount * fieldArea * 4046.86;
 
     const daySchedule = {
@@ -65,9 +50,9 @@ function generateIrrigationSchedule(mlResult, sowingDate, fieldArea) {
       sessions: []
     };
 
-    // If irrigation is needed, create sessions
+    
     if (dayPrediction.should_irrigate && totalWaterAmount > 0) {
-      // Determine number of sessions based on water amount
+      
       let sessionsCount;
       if (totalWaterAmount <= 10) {
         sessionsCount = 1;
@@ -80,14 +65,14 @@ function generateIrrigationSchedule(mlResult, sowingDate, fieldArea) {
       const sessionTimes = getSessionTimes(sessionsCount);
       const waterPerSession = Math.ceil(totalWaterAmount / sessionsCount);
       
-      // Typical 5V mini submersible pump (0.5cm nozzle) rate is ~2 Liters per minute
-      const PUMP_CAPACITY_LPM = 2.0;
+      // Typical 5-10 HP agricultural pump capacity (Liters Per Minute)
+      const PUMP_CAPACITY_LPM = 1000.0;
 
       sessionTimes.forEach((time, index) => {
-        // Calculate duration in minutes
+        
         const durationMinutes = Math.ceil(waterPerSession / PUMP_CAPACITY_LPM);
         
-        // Calculate end time
+        
         const [hours, minutes] = time.split(':').map(Number);
         const startTimeObj = new Date();
         startTimeObj.setHours(hours, minutes, 0, 0);
@@ -113,19 +98,11 @@ function generateIrrigationSchedule(mlResult, sowingDate, fieldArea) {
   return schedule;
 }
 
-/**
- * Generate crop-specific recommendations
- * @param {string} crop - Crop type
- * @param {string} soilType - Soil type
- * @param {Object} mlResult - ML prediction result
- * @param {Object} validationResult - Validation result
- * @param {number} fieldArea - Field area in acres
- * @returns {Array<string>} - Recommendations array
- */
+
 function generateRecommendations(crop, soilType, mlResult, validationResult, fieldArea) {
   const recommendations = [];
 
-  // Basic irrigation recommendations
+  
   if (mlResult.should_irrigate) {
     const totalWater = mlResult.water_amount * fieldArea;
     recommendations.push(`Irrigate with ${totalWater.toFixed(1)} liters per day for optimal ${crop} growth`);
@@ -135,15 +112,15 @@ function generateRecommendations(crop, soilType, mlResult, validationResult, fie
     recommendations.push("Monitor soil moisture levels and check again in 24 hours");
   }
 
-  // Crop-specific recommendations
+  
   const cropRecommendations = getCropSpecificRecommendations(crop);
   recommendations.push(...cropRecommendations);
 
-  // Soil-specific recommendations
+  
   const soilRecommendations = getSoilSpecificRecommendations(soilType);
   recommendations.push(...soilRecommendations);
 
-  // Add validation-based recommendations
+  
   if (validationResult.checks) {
     if (validationResult.checks.season && validationResult.checks.season.passed) {
       recommendations.push(`Current season is suitable for ${crop} cultivation`);
@@ -156,11 +133,7 @@ function generateRecommendations(crop, soilType, mlResult, validationResult, fie
   return recommendations;
 }
 
-/**
- * Get crop-specific recommendations
- * @param {string} crop - Crop type
- * @returns {Array<string>} - Crop recommendations
- */
+
 function getCropSpecificRecommendations(crop) {
   const recommendations = {
     wheat: [
@@ -207,11 +180,7 @@ function getCropSpecificRecommendations(crop) {
   ];
 }
 
-/**
- * Get soil-specific recommendations
- * @param {string} soilType - Soil type
- * @returns {Array<string>} - Soil recommendations
- */
+
 function getSoilSpecificRecommendations(soilType) {
   const recommendations = {
     sandy: [
@@ -248,11 +217,7 @@ function getSoilSpecificRecommendations(soilType) {
   ];
 }
 
-/**
- * Get session times based on number of sessions per day
- * @param {number} sessionsCount - Number of sessions
- * @returns {Array<string>} - Session times
- */
+
 function getSessionTimes(sessionsCount) {
   switch (sessionsCount) {
     case 1:

@@ -18,11 +18,9 @@
   font-weight: 800;
   background: linear-gradient(135deg, var(--green-primary), #10b981);
 
-  /* ADD THIS */
-  background-clip: text;
+    background-clip: text;
 
-  /* KEEP THESE */
-  -webkit-background-clip: text;
+    -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 
   letter-spacing: -0.5px;

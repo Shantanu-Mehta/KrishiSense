@@ -93,7 +93,7 @@
   border: 1px solid var(--green-primary);
 }
 
-/* FIX: Attached the floating properties to a proper class (likely .status-text) */
+
 .status-text {
   font-size: 14px;
   color: #95d5b2;
@@ -179,7 +179,7 @@
     order: 3;
     width: 100%;
     padding: 10px 0;
-    justify-content: center; /* Center links on mobile */
+    justify-content: center; 
   }
 
   .status {

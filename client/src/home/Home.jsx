@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import "./Home.css";
 
-const images = import.meta.glob('../assets/*.{jpg,jpeg,png,svg}', { eager: true, import: 'default' });
+const images = import.meta.glob('../assets/*.png', { eager: true, import: 'default' });
 
 const getImageUrl = (cropName) => {
   if (!cropName) return null;
@@ -37,7 +37,7 @@ function Home() {
     };
 
     fetchIssues();
-    const interval = setInterval(fetchIssues, 10000); // Poll every 10s
+    const interval = setInterval(fetchIssues, 10000); 
     return () => {
       mounted = false;
       clearInterval(interval);
@@ -53,6 +53,20 @@ function Home() {
   const formatValue = (value, suffix = "") => {
     if (value === null || value === undefined || value === "") return "-";
     return `${value}${suffix}`;
+  };
+
+  const handleDeactivate = async (planId) => {
+    try {
+      const res = await axios.patch(`http://localhost:5000/api/irrigation/plan/${planId}/deactivate`);
+      if (res.data.success) {
+        setIssues(issues.map(issue => 
+          issue.farm_id === planId ? { ...issue, status: false } : issue
+        ));
+      }
+    } catch (error) {
+      console.error("Failed to deactivate plan:", error);
+      alert("Failed to deactivate the crop plan.");
+    }
   };
 
   return (
@@ -92,7 +106,7 @@ function Home() {
                 <article key={issue._id || idx} className="home-card">
                   <div className="home-card-header">
                     <div>
-                      <h2>{issue.crop_type ? issue.crop_type : "Crop"}</h2>
+                      <h2 style={{ color: '#3b82f6' }}>{issue.crop_type ? issue.crop_type : "Crop"}</h2>
                       <p>{issue.region ? issue.region : "Unknown region"}</p>
                     </div>
                     <span className={`home-pill ${issue.status ? "home-pill-active" : "home-pill-inactive"}`}>
@@ -140,6 +154,11 @@ function Home() {
                   <button className="home-button" onClick={() => navigate(`/schedules/${issue.farm_id}`)}>
                     View schedule
                   </button>
+                  {issue.status && (
+                    <button className="home-button" style={{ background: '#ef4444', marginTop: '8px' }} onClick={() => handleDeactivate(issue.farm_id)}>
+                      Deactivate
+                    </button>
+                  )}
                 </article>
               );
             })}

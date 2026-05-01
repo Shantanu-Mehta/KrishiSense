@@ -6,7 +6,7 @@ const { buildIrrigationPlan } = require('../services/irrigationPlanService');
 const IrrigationPlan = require('../models/IrrigationPlan');
 const sensorDataModel = require('../models/sensor_data_raw');
 
-// POST /api/irrigation/plan - Create irrigation plan
+
 router.post('/plan', async (req, res) => {
   try {
     const {
@@ -18,7 +18,7 @@ router.post('/plan', async (req, res) => {
       state
     } = req.body;
 
-    // Validate required fields
+    
     if (!crop || !soilType || !sowingDate || !fieldArea || !city || !state) {
       return res.status(400).json({
         success: false,
@@ -26,12 +26,12 @@ router.post('/plan', async (req, res) => {
       });
     }
 
-    // Get latest sensor data from ESP32
+    
     const latestSensorData = await sensorDataModel.findOne()
       .sort({ timestamp: -1 })
       .limit(1);
 
-    // If no sensor data is available, default to mock data instead of throwing error
+    
     const sensorData = latestSensorData || {
       soil_moisture: 50,
       humidity: 60,
@@ -41,7 +41,7 @@ router.post('/plan', async (req, res) => {
       timestamp: new Date()
     };
 
-    // Merge sensor data with user input
+    
     const mergedData = {
       crop,
       soilType,
@@ -56,7 +56,7 @@ router.post('/plan', async (req, res) => {
       state
     };
 
-    // Step 1: Validate and prepare for ML
+    
     const validationResult = validateAndPlan(mergedData);
 
     if (!validationResult.passed) {
@@ -68,13 +68,13 @@ router.post('/plan', async (req, res) => {
       });
     }
 
-    // Step 2: Run ML prediction
+    
     const mlResult = await runMLPrediction(validationResult.mlInput);
 
-    // Step 3: Build irrigation plan
+    
     const irrigationPlan = buildIrrigationPlan(mergedData, mlResult, validationResult);
 
-    // Step 4: Save to database
+    
     const savedPlan = new IrrigationPlan({
       plan_id: `PLAN_${Date.now()}`,
       crop: crop.toLowerCase(),
@@ -101,7 +101,7 @@ router.post('/plan', async (req, res) => {
 
     await savedPlan.save();
 
-    // Return success response
+    
     res.status(201).json({
       success: true,
       message: 'Irrigation plan created successfully',
@@ -128,7 +128,7 @@ router.post('/plan', async (req, res) => {
   }
 });
 
-// GET /api/irrigation/plans - Get all irrigation plans
+
 router.get('/plans', async (req, res) => {
   try {
     const plans = await IrrigationPlan.find()
@@ -148,7 +148,7 @@ router.get('/plans', async (req, res) => {
   }
 });
 
-// GET /api/irrigation/plan/:planId - Get specific irrigation plan
+
 router.get('/plan/:planId', async (req, res) => {
   try {
     const plan = await IrrigationPlan.findOne({ plan_id: req.params.planId });
@@ -170,6 +170,23 @@ router.get('/plan/:planId', async (req, res) => {
       success: false,
       error: 'Internal server error'
     });
+  }
+});
+
+router.patch('/plan/:planId/deactivate', async (req, res) => {
+  try {
+    const plan = await IrrigationPlan.findOneAndUpdate(
+      { plan_id: req.params.planId },
+      { should_irrigate: false },
+      { new: true }
+    );
+    if (!plan) {
+      return res.status(404).json({ success: false, error: 'Irrigation plan not found' });
+    }
+    res.json({ success: true, plan });
+  } catch (error) {
+    console.error('Error deactivating irrigation plan:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 

@@ -2,23 +2,19 @@ const { spawn } = require('child_process');
 const path = require('path');
 const os = require('os');
 
-/**
- * Call Python ML model to make predictions
- * @param {Object} cropData - Crop and sensor data
- * @returns {Promise<Object>} - ML predictions
- */
+
 const callMLModel = async (cropData) => {
   return new Promise((resolve, reject) => {
     try {
-      // Path to Python script
+      
       const pythonScript = path.join(__dirname, '../ml/predict.py');
       
-      // Use .venv Python path
+      
       const pythonPath = os.platform() === 'win32' 
         ? path.join(__dirname, '../../.venv/Scripts/python.exe')
         : path.join(__dirname, '../../.venv/bin/python');
       
-      // Spawn Python process
+      
       const pythonProcess = spawn(pythonPath, [pythonScript, JSON.stringify(cropData)]);
       
       let output = '';
@@ -29,12 +25,12 @@ const callMLModel = async (cropData) => {
         output += data.toString();
       });
 
-      // Collect stderr
+      
       pythonProcess.stderr.on('data', (data) => {
         error += data.toString();
       });
 
-      // Handle process completion
+      
       pythonProcess.on('close', (code) => {
         if (code !== 0) {
           console.error('Python error:', error);
@@ -55,7 +51,7 @@ const callMLModel = async (cropData) => {
         }
       });
 
-      // Handle process errors
+      
       pythonProcess.on('error', (err) => {
         reject(new Error(`Failed to spawn Python process: ${err.message}`));
       });
@@ -66,23 +62,19 @@ const callMLModel = async (cropData) => {
   });
 };
 
-/**
- * Run ML prediction for ESP32 sensor data
- * @param {Object} inputData - Sensor data from ESP32
- * @returns {Promise<Object>} - { should_irrigate: boolean, water_amount: number }
- */
+
 const runMLPrediction = async (inputData) => {
   return new Promise((resolve) => {
     try {
-      // Path to Python script
+      
       const pythonScript = path.join(__dirname, '../ml/predict.py');
       
-      // Use .venv Python path
+      
       const pythonPath = os.platform() === 'win32' 
         ? path.join(__dirname, '../../.venv/Scripts/python.exe')
         : path.join(__dirname, '../../.venv/bin/python');
       
-      // Spawn Python process
+      
       const pythonProcess = spawn(pythonPath, [pythonScript, JSON.stringify(inputData)]);
       
       let output = '';
@@ -93,12 +85,12 @@ const runMLPrediction = async (inputData) => {
         output += data.toString();
       });
 
-      // Collect stderr
+      
       pythonProcess.stderr.on('data', (data) => {
         error += data.toString();
       });
 
-      // Handle process completion
+      
       pythonProcess.on('close', (code) => {
         try {
           const result = JSON.parse(output.trim());
@@ -109,12 +101,12 @@ const runMLPrediction = async (inputData) => {
           });
         } catch (e) {
           console.error('Failed to parse ML output:', output, 'Error:', error);
-          // Provide fallback values when ML fails
+          
           resolve({ should_irrigate: false, water_amount: 0, schedule: [] });
         }
       });
 
-      // Handle process errors
+      
       pythonProcess.on('error', (err) => {
         console.error('Failed to spawn Python process:', err.message);
         resolve({ should_irrigate: false, water_amount: 0, schedule: [] });
@@ -127,22 +119,16 @@ const runMLPrediction = async (inputData) => {
   });
 };
 
-/**
- * Generate irrigation schedule based on ML predictions and crop calendar
- * @param {Object} mlPrediction - ML model predictions
- * @param {Object} cropData - Crop information with CSV header names
- * @param {Object} cropCalendar - Crop details from calendar
- * @returns {Object} - Detailed irrigation schedule
- */
+
 const generateScheduleFromML = (mlPrediction, cropData, cropCalendar) => {
   try {
-    // Use recommended_irrigation_mm from ML prediction or fallback to cropCalendar
+    
     const waterAmount = mlPrediction.predictions.recommended_irrigation_mm || cropCalendar.waterRequirement || 500;
     const confidence = mlPrediction.predictions.confidence || 0.85;
     const sowDate = new Date(cropData.sowing_date);
     const growthDays = cropData.crop_growth_days || cropCalendar.growthDays || 120;
 
-    // Generate phase-based schedule
+    
     const schedule = [];
     const phases = cropCalendar.irrigationSchedule || [];
 
@@ -177,7 +163,7 @@ const generateScheduleFromML = (mlPrediction, cropData, cropCalendar) => {
       });
     });
 
-    // Calculate harvest date
+    
     const harvestDate = new Date(sowDate);
     harvestDate.setDate(harvestDate.getDate() + growthDays);
 
@@ -199,18 +185,13 @@ const generateScheduleFromML = (mlPrediction, cropData, cropCalendar) => {
   }
 };
 
-/**
- * Process crop data with ML model and generate schedule
- * @param {Object} cropData - Complete crop information
- * @param {Object} cropCalendar - Crop calendar details
- * @returns {Promise<Object>} - Complete prediction and schedule
- */
+
 const processCropWithML = async (cropData, cropCalendar) => {
   try {
-    // Call ML model
+    
     const mlPrediction = await callMLModel(cropData);
 
-    // Generate detailed schedule based on ML predictions
+    
     const schedule = generateScheduleFromML(mlPrediction, cropData, cropCalendar);
 
     if (!schedule) {
@@ -228,34 +209,29 @@ const processCropWithML = async (cropData, cropCalendar) => {
   }
 };
 
-/**
- * Optimize irrigation schedule based on current conditions
- * @param {Object} currentSchedule - Current irrigation schedule
- * @param {Object} sensorData - Current sensor readings using CSV header names
- * @returns {Object} - Optimized schedule
- */
+
 const optimizeSchedule = (currentSchedule, sensorData) => {
   try {
     const optimized = JSON.parse(JSON.stringify(currentSchedule));
     
-    // Adjust based on soil moisture using CSV field name
+    
     const soilMoisture = sensorData['soil_moisture_%'] || 50;
     if (soilMoisture > 70) {
-      // Skip next irrigation if soil is already wet
+      
       optimized.schedule.forEach(phase => {
         phase.irrigations = phase.irrigations.filter((_, idx) => idx % 2 === 0);
       });
     } else if (soilMoisture < 30) {
-      // Increase irrigation frequency if soil is dry
+      
       optimized.schedule.forEach(phase => {
         phase.interval = Math.max(1, phase.interval - 1);
       });
     }
 
-    // Adjust based on rainfall using CSV field name
+    
     const rainfall = sensorData.rainfall_mm || 0;
     if (rainfall > 50) {
-      // Reduce water amount if there's significant rainfall
+      
       const rainfallFactor = Math.max(0.7, 1 - (rainfall / 200));
       optimized.schedule.forEach(phase => {
         phase.irrigations.forEach(irr => {

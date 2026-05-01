@@ -73,7 +73,7 @@ void setup() {
 
   // Pump relay — OFF immediately on boot
   pinMode(RELAY_PIN, OUTPUT);
-  digitalWrite(RELAY_PIN, LOW); // Change to HIGH here if relay is active-low
+  digitalWrite(RELAY_PIN, LOW); // LOW = OFF for standard active-high relay
   pumpState = false;
   Serial.println("✅ Relay configured — Pump OFF");
 
@@ -99,7 +99,7 @@ void loop() {
 
   // ── Auto pump OFF when timer expires (non-blocking) ───────
   if (pumpTimerActive && millis() >= pumpOffTime) {
-    digitalWrite(RELAY_PIN, LOW); // Change to HIGH here if relay is active-low
+    digitalWrite(RELAY_PIN, LOW); // LOW = OFF
     pumpState = false;
     pumpTimerActive = false;
     Serial.println("🛑 PUMP → OFF (auto timer expired)");
@@ -316,8 +316,7 @@ void checkPumpCommand() {
 
       if (command == "PUMP_ON") {
         Serial.println("   💧 PUMP → ON");
-        digitalWrite(RELAY_PIN,
-                     HIGH); // Change to LOW here if relay is active-low
+        digitalWrite(RELAY_PIN, HIGH); // HIGH = ON for standard relay
         pumpState = true;
 
         if (durationMins > 0) {
@@ -337,8 +336,7 @@ void checkPumpCommand() {
       } else {
         // PUMP_OFF command from web app
         Serial.println("   🛑 PUMP → OFF (web command)");
-        digitalWrite(RELAY_PIN,
-                     LOW); // Change to HIGH here if relay is active-low
+        digitalWrite(RELAY_PIN, LOW); // LOW = OFF
         pumpState = false;
         pumpTimerActive = false;
       }

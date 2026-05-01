@@ -10,7 +10,7 @@ export default function Sidebar() {
 
   return (
     <div className="sidebar">
-      {/*<h2 className="logo">KrishiSense</h2>*/}
+      
 
       <ul>
         <li className={isActive("/") ? "active" : ""}>
