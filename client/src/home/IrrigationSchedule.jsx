@@ -42,7 +42,13 @@ function IrrigationSchedule() {
   }, [planId]);
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+
+  const formatWater = (liters) => {
+    if (!liters) return "-";
+    const amount = Math.ceil(liters);
+    return amount >= 1000 ? `${(amount / 1000).toFixed(2)} kL` : `${amount} L`;
   };
 
   if (isLoading) {
@@ -76,45 +82,80 @@ function IrrigationSchedule() {
       <div className="schedule-container">
         <div className="schedule-header">
           <h1>Irrigation Schedule</h1>
-          <p>7-day plan for {plan.crop}</p>
+          <p>7-day precise watering plan for {plan.crop}</p>
         </div>
 
-        <div className="plan-summary">
-          <div className="summary-item">
-            <strong>Plan ID:</strong> {plan.plan_id}
+        <div className="plan-summary-grid">
+          <div className="summary-card">
+            <span className="summary-label">Plan ID</span>
+            <span className="summary-value">{plan.plan_id}</span>
           </div>
-          <div className="summary-item">
-            <strong>Crop:</strong> {plan.crop}
+          <div className="summary-card">
+            <span className="summary-label">Crop</span>
+            <span className="summary-value" style={{textTransform: 'capitalize'}}>{plan.crop}</span>
           </div>
-          <div className="summary-item">
-            <strong>Location:</strong> {plan.location}
+          <div className="summary-card">
+            <span className="summary-label">Location</span>
+            <span className="summary-value">{plan.location}</span>
           </div>
-          <div className="summary-item">
-            <strong>Total Water Needed:</strong> {plan.water_amount_per_session} Liters
+          <div className="summary-card">
+            <span className="summary-label">Total Water Needed</span>
+            <span className="summary-value">{formatWater(plan.water_amount_per_session)}</span>
           </div>
         </div>
+
+        {plan.sensor_data && (
+          <div className="sensor-snapshot">
+            <h3>Sensor Snapshot</h3>
+            <p className="snapshot-subtitle">Field conditions when this plan was generated</p>
+            <div className="snapshot-grid">
+              <div className="snap-item"><span className="snap-icon">🌡️</span> <strong>Temp:</strong> {plan.sensor_data.temperature || "-"}°C</div>
+              <div className="snap-item"><span className="snap-icon">💧</span> <strong>Humidity:</strong> {plan.sensor_data.humidity || "-"}%</div>
+              <div className="snap-item"><span className="snap-icon">🌱</span> <strong>Soil Moist:</strong> {plan.sensor_data.soil_moisture || "-"}%</div>
+              <div className="snap-item"><span className="snap-icon">⚗️</span> <strong>pH:</strong> {plan.sensor_data.ph ? Number(plan.sensor_data.ph).toFixed(2) : "-"}</div>
+              <div className="snap-item"><span className="snap-icon">🌊</span> <strong>Water Lvl:</strong> {plan.sensor_data.water_level || "-"}%</div>
+            </div>
+          </div>
+        )}
 
         <div className="schedule-list">
           {plan.schedule?.map((day, idx) => (
-            <div key={idx} className={`schedule-day ${day.should_irrigate ? "active" : "inactive"}`}>
+            <div key={idx} className={`schedule-day-card ${day.should_irrigate ? "active-day" : "skip-day"}`}>
               <div className="day-header">
-                <span className="day-date">{formatDate(day.date)}</span>
-                <span className={`day-status ${day.should_irrigate ? "yes" : "no"}`}>
-                  {day.should_irrigate ? "Irrigate" : "Skip"}
+                <div className="day-title-group">
+                  <span className="day-number">Day {day.day}</span>
+                  <span className="day-date">{formatDate(day.date)}</span>
+                </div>
+                <span className={`day-status ${day.should_irrigate ? "status-irrigate" : "status-skip"}`}>
+                  {day.should_irrigate ? "💧 Irrigate" : "⏸️ Skip"}
                 </span>
               </div>
-              {day.should_irrigate && day.sessions && (
+              
+              {day.should_irrigate && day.sessions && day.sessions.length > 0 ? (
                 <div className="day-sessions">
                   {day.sessions.map((session, sidx) => (
                     <div key={sidx} className="session-card">
-                      <div className="session-title">Session {sidx + 1}</div>
+                      <div className="session-header">Session {session.session_number || sidx + 1}</div>
                       <div className="session-details">
-                        <span><strong>Motor ON:</strong> {session.time}</span>
-                        <span><strong>Motor OFF:</strong> {session.end_time || "-"}</span>
-                        <span><strong>Amount:</strong> {session.water_amount_liters ? `${Math.ceil(session.water_amount_liters)} L` : "-"}</span>
+                        <div className="session-detail-row">
+                          <span className="detail-label">Start Time:</span>
+                          <span className="detail-value">{session.time}</span>
+                        </div>
+                        <div className="session-detail-row">
+                          <span className="detail-label">End Time:</span>
+                          <span className="detail-value">{session.end_time || "-"}</span>
+                        </div>
+                        <div className="session-detail-row highlight-row">
+                          <span className="detail-label">Amount:</span>
+                          <span className="detail-value highlight-value">{formatWater(session.water_amount_liters)}</span>
+                        </div>
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : (
+                <div className="no-irrigation-message">
+                  Soil moisture is sufficient for this day. No watering needed.
                 </div>
               )}
             </div>

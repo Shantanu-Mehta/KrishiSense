@@ -93,6 +93,7 @@ router.post('/plan', async (req, res) => {
         humidity: sensorData.humidity,
         soil_moisture: sensorData.soil_moisture,
         water_level: sensorData.water_level,
+        ph: sensorData.ph,
         timestamp: sensorData.timestamp
       },
       created_at: new Date()

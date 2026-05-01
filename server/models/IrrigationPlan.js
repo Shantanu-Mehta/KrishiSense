@@ -29,6 +29,7 @@ const IrrigationPlanSchema = new mongoose.Schema({
     humidity: { type: Number },
     soil_moisture: { type: Number },
     water_level: { type: Number },
+    ph: { type: Number },
     timestamp: { type: Date }
   },
   created_at: { type: Date, default: Date.now }

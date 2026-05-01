@@ -17,21 +17,31 @@ function Home() {
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchIssues = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/data/plans");
-      setIssues(Array.isArray(res.data) ? res.data : []);
-    } catch (error) {
-      console.error("Error fetching irrigation plans:", error);
-      setIssues([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let mounted = true;
+
+    const fetchIssues = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/data/plans");
+        if (mounted) {
+          setIssues(Array.isArray(res.data) ? res.data : []);
+          setLoading(false);
+        }
+      } catch (error) {
+        if (mounted) {
+          console.error("Error fetching irrigation plans:", error);
+          setIssues([]);
+          setLoading(false);
+        }
+      }
+    };
+
     fetchIssues();
+    const interval = setInterval(fetchIssues, 10000); // Poll every 10s
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const formatDate = (value) => {

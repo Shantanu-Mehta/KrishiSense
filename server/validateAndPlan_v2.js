@@ -217,6 +217,25 @@ function validateAndPlan(input) {
     };
   }
 
+  // ── Late Sowing Check ─────────────────────────────────────────
+  const isLateSowing = (season === "Kharif" && month >= 9) || 
+                       (season === "Rabi" && (month === 2 || month === 3)) || 
+                       (season === "Zaid" && month === 5);
+
+  if (isLateSowing) {
+    checks.season = {
+      passed: false,
+      note: `Too late in ${season} season to sow ${crop}`
+    };
+    return {
+      passed: false,
+      failedAt: "season",
+      reason: `Plantation time is over. You are trying to sow ${crop} at the end of the ${season} season. If sown now, the crop will likely fail or yield poor results due to the upcoming season change.`,
+      suggestion: `Wait for the next suitable season to plant ${crop}, or choose a crop suitable for the upcoming season.`,
+      checks
+    };
+  }
+
   checks.season = {
     passed: true,
     note: `${season} season is correct for ${crop}`
